@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f8">
+  <title>DART Grid Atlas</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172635;
+      --muted: #71808e;
+      --surface: rgba(255, 255, 255, .94);
+      --surface-strong: #fff;
+      --surface-border: rgba(26, 47, 64, .1);
+      --shadow: 0 12px 36px rgba(34, 52, 65, .12);
+      --accent: #147d78;
+      --accent-soft: #e4f5f2;
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --ink: #e8eff3;
+      --muted: #9babb7;
+      --surface: rgba(20, 31, 40, .94);
+      --surface-strong: #192630;
+      --surface-border: rgba(208, 227, 236, .12);
+      --shadow: 0 14px 40px rgba(0, 0, 0, .3);
+      --accent: #69d3c4;
+      --accent-soft: rgba(68, 173, 159, .16);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .topbar {
+      position: relative;
+      z-index: 1000;
+      display: grid;
+      grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
+      align-items: center;
+      min-height: 76px;
+      padding: 0 30px;
+      background: var(--surface-strong);
+      border-bottom: 1px solid var(--surface-border);
+      box-shadow: 0 2px 14px rgba(28, 48, 62, .05);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(145deg, #178d83, #246b82);
+      border-radius: 12px;
+      box-shadow: 0 5px 13px rgba(25, 122, 119, .23);
+    }
+
+    .brand-mark svg { width: 21px; height: 21px; }
+    .brand-copy { display: grid; gap: 2px; }
+    .brand-name { font-size: 15px; font-weight: 750; letter-spacing: -.025em; }
+    .brand-subtitle { color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .13em; }
+
+    .mode-switch {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .mode-button {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 16px;
+      min-height: 40px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 12px;
+      font-weight: 620;
+    }
+
+    .mode-button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .mode-button[aria-pressed="true"] {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .mode-button svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+    }
+
+    .topbar-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .theme-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      min-height: 40px;
+      padding: 0;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .theme-button:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .theme-button svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+    }
+
+    main {
+      position: absolute;
+      inset: 76px 0 0 0;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #f0f0f0;
+    }
+
+    .legend {
+      position: absolute;
+      z-index: 500;
+      bottom: 28px;
+      right: 28px;
+      display: grid;
+      gap: 12px;
+      max-width: 220px;
+      padding: 16px;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      font-size: 11px;
+      pointer-events: auto;
+    }
+
+    .legend-title {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .legend-items {
+      display: grid;
+      gap: 8px;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 0;
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 auto;
+      background: var(--legend-color);
+      border: 2px solid var(--surface-strong);
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px var(--legend-color);
+    }
+
+    .legend-line {
+      width: 17px;
+      height: 3px;
+      flex: 0 0 auto;
+      background: var(--legend-color);
+      border-radius: 5px;
+    }
+
+    .map-error {
+      position: absolute;
+      z-index: 600;
+      top: 24px;
+      left: 28px;
+      display: none;
+      max-width: min(390px, calc(100vw - 56px));
+      padding: 11px 14px;
+      color: #9a3030;
+      background: #fff0ef;
+      border: 1px solid rgba(180, 51, 51, .2);
+      border-radius: 11px;
+      box-shadow: var(--shadow);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    html[data-theme="dark"] .map-error { color: #ffc2bd; background: #3a2427; }
+    .map-error.visible { display: block; }
+
+    .mapboxgl-popup-content {
+      color: var(--ink);
+      background: var(--surface-strong);
+      padding: 12px 14px;
+      border-radius: 8px;
+    }
+
+    .map-popup { min-width: 180px; padding: 0; }
+    .popup-title { margin: 0 0 2px; font-size: 12px; font-weight: 760; }
+    .popup-subtitle { margin: 0 0 10px; color: var(--muted); font-size: 10px; }
+    .popup-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 5px 0;
+      border-top: 1px solid var(--surface-border);
+      font-size: 10px;
+    }
+    .popup-label { color: var(--muted); }
+    .popup-value { max-width: 140px; color: var(--ink); font-weight: 620; text-align: right; }
+
+    .map-footnote {
+      position: absolute;
+      z-index: 500;
+      bottom: 28px;
+      left: 28px;
+      padding: 8px 11px;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      box-shadow: 0 5px 17px rgba(34, 52, 65, .08);
+      font-size: 9px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        grid-template-columns: auto 1fr auto;
+        gap: 10px;
+        min-height: 66px;
+        padding: 0 12px;
+      }
+      .brand { gap: 8px; }
+      .brand-mark { width: 34px; height: 34px; border-radius: 10px; }
+      .brand-subtitle { display: none; }
+      .brand-name { font-size: 13px; }
+      .mode-switch { justify-self: center; gap: 4px; }
+      .mode-button { padding: 0 10px; font-size: 10px; }
+      .mode-button svg { width: 14px; height: 14px; }
+      .theme-button { width: 38px; min-height: 38px; padding: 0; }
+      main { inset-block-start: 66px; }
+      .map-error { top: 14px; left: 12px; max-width: calc(100vw - 24px); }
+      .legend { right: 12px; bottom: 22px; width: 180px; padding: 12px; }
+      .map-footnote { bottom: 22px; left: 12px; max-width: calc(100vw - 220px); font-size: 8px; }
+    }
+
+    @media (max-width: 420px) {
+      .topbar { grid-template-columns: 1fr auto; }
+      .brand { display: none; }
+      .mode-switch { justify-self: start; gap: 4px; }
+      .mode-button { padding: 0 8px; }
+      .legend { width: 160px; }
+      .map-footnote { max-width: calc(100vw - 190px); }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="DART Grid Atlas home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M13.2 2.8 5.7 13h5.1l-.5 8.2L18.3 11h-5.2l.1-8.2Z" fill="currentColor"/>
+        </svg>
+      </span>
+      <span class="brand-copy">
+        <span class="brand-name">DART Grid Atlas</span>
+        <span class="brand-subtitle">U.S. POWER SYSTEMS</span>
+      </span>
+    </a>
+
+    <nav class="mode-switch" aria-label="Map layers">
+      <button class="mode-button" id="plants-button" type="button" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M4 20h16M6 20V9l5 3V8l7 3v9M9 16h1m4 0h1m-5-3h1m4 0h1"/>
+        </svg>
+        <span>Power Plants Map</span>
+      </button>
+      <button class="mode-button" id="network-button" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="5" cy="6" r="2"/><circle cx="19" cy="7" r="2"/><circle cx="12" cy="18" r="2"/>
+          <path d="m7 7 4 9m6-8-4 8M7 6.4l10-.1"/>
+        </svg>
+        <span>Infrastructure Map</span>
+      </button>
+    </nav>
+
+    <div class="topbar-actions">
+      <button class="theme-button" id="theme-button" type="button" aria-label="Switch to dark theme">
+        <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M20.2 15.1A8.3 8.3 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div id="map" role="application" aria-label="Interactive map of U.S. power infrastructure"></div>
+    <div class="map-error" id="map-error" role="alert"></div>
+    <aside class="legend" aria-label="Map legend">
+      <h2 class="legend-title" id="legend-title">Power plants</h2>
+      <div class="legend-items" id="legend-items"></div>
+    </aside>
+    <div class="map-footnote">U.S. infrastructure data · Regional boundaries shown for context</div>
+  </main>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script>
+    // Replaced by map.py with MAPBOX_TOKEN (or its default public token).
+    mapboxgl.accessToken = "__MAPBOX_TOKEN__";
+
+    const STYLES = {
+      light: "mapbox://styles/mapbox/light-v11",
+      dark: "mapbox://styles/mapbox/dark-v11"
+    };
+    const VOLTAGE_CLASSES = [
+      ["765 / 500 kV", "#df3f63"],
+      ["345 kV", "#8a5cd0"],
+      ["230 kV", "#2b86c5"],
+      ["115 kV and below", "#3f9d74"]
+    ];
+    const FUEL_CLASSES = [
+      ["Wind", "#43b985", ["WND"]],
+      ["Solar", "#e7ae4c", ["SUN"]],
+      ["Hydro", "#45b7c8", ["WAT"]],
+      ["Nuclear", "#9d82db", ["NUC"]],
+      ["Natural gas", "#5289d7", ["NG"]]
+    ];
+    const OTHER_FUEL_COLOR = "#eb785c";
+    const TX_LAYERS = ["tx-lines", "tx-lines-hit"];
+    const PLANT_LAYERS = ["power-plants"];
+
+    const ui = {
+      plantsButton: document.getElementById("plants-button"),
+      networkButton: document.getElementById("network-button"),
+      themeButton: document.getElementById("theme-button"),
+      error: document.getElementById("map-error"),
+      legendTitle: document.getElementById("legend-title"),
+      legendItems: document.getElementById("legend-items")
+    };
+
+    let activeMode = "plants";
+    let activeTheme = localStorage.getItem("dart-map-theme") === "dark" ? "dark" : "light";
+    document.documentElement.dataset.theme = activeTheme;
+
+    const map = new mapboxgl.Map({
+      container: "map",
+      style: STYLES[activeTheme],
+      center: [-98, 39],
+      zoom: 3.8,
+      minZoom: 2.5,
+      maxZoom: 16,
+      projection: "mercator",
+      attributionControl: true
+    });
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
+
+    // Start all downloads immediately so switching tabs is instant.
+    const fetchJson = url => fetch(url).then(r => {
+      if (!r.ok) throw new Error(`${r.status} ${r.statusText} (${url})`);
+      return r.json();
+    });
+    const data = {
+      regions: fetchJson("/api/iso-regions"),
+      lines: fetchJson("/api/transmission-lines-geojson"),
+      plants: fetchJson("/api/power-plants")
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function popupHtml(title, rows) {
+      return `<div class="map-popup"><div class="popup-title">${escapeHtml(title)}</div>${rows
+        .filter(([, v]) => v !== null && v !== undefined && v !== "")
+        .map(([k, v]) => `<div class="popup-row"><span class="popup-label">${escapeHtml(k)}</span><span class="popup-value">${escapeHtml(v)}</span></div>`)
+        .join("")}</div>`;
+    }
+
+    function showError(error) {
+      ui.error.textContent = `Unable to load map data: ${error.message || error}`;
+      ui.error.classList.add("visible");
+      console.error("DART map data error:", error);
+    }
+
+    function setLegend(mode) {
+      if (mode === "plants") {
+        ui.legendTitle.textContent = "Generation mix";
+        ui.legendItems.innerHTML = [...FUEL_CLASSES.map(([l, c]) => [l, c]), ["Other fuels", OTHER_FUEL_COLOR]]
+          .map(([l, c]) => `<div class="legend-row"><span class="legend-dot" style="--legend-color:${c}"></span>${l}</div>`).join("");
+      } else {
+        ui.legendTitle.textContent = "Transmission Lines";
+        ui.legendItems.innerHTML = VOLTAGE_CLASSES
+          .map(([l, c]) => `<div class="legend-row"><span class="legend-line" style="--legend-color:${c}"></span>${l}</div>`).join("");
+      }
+    }
+
+    function setVisibility(layerIds, visible) {
+      layerIds.forEach(id => {
+        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+      });
+    }
+
+    function applyMode() {
+      setVisibility(TX_LAYERS, activeMode === "network");
+      setVisibility(PLANT_LAYERS, activeMode === "plants");
+    }
+
+    function switchMode(mode) {
+      activeMode = mode;
+      ui.plantsButton.setAttribute("aria-pressed", String(mode === "plants"));
+      ui.networkButton.setAttribute("aria-pressed", String(mode === "network"));
+      setLegend(mode);
+      applyMode();
+    }
+
+    const voltageColor = [
+      "case",
+      [">=", ["to-number", ["get", "voltage"], 0], 500], VOLTAGE_CLASSES[0][1],
+      [">=", ["to-number", ["get", "voltage"], 0], 345], VOLTAGE_CLASSES[1][1],
+      [">=", ["to-number", ["get", "voltage"], 0], 230], VOLTAGE_CLASSES[2][1],
+      VOLTAGE_CLASSES[3][1]
+    ];
+    const fuelColor = ["match", ["get", "primary_fuel"]];
+    FUEL_CLASSES.forEach(([, color, codes]) => fuelColor.push(codes, color));
+    fuelColor.push(OTHER_FUEL_COLOR);
+
+    // Adds sources/layers to the current style. Called on every style load (theme switches reset the style).
+    async function addDataLayers() {
+      const dark = activeTheme === "dark";
+      try {
+        const regions = await data.regions;
+        if (!map.getSource("iso-regions")) {
+          map.addSource("iso-regions", { type: "geojson", data: regions });
+          map.addLayer({
+            id: "iso-regions",
+            type: "line",
+            source: "iso-regions",
+            paint: { "line-color": dark ? "#6b7f8d" : "#9aa8b3", "line-width": 0.8, "line-opacity": 0.6, "line-dasharray": [3, 2] }
+          });
+        }
+      } catch (error) { showError(error); }
+
+      try {
+        const lines = await data.lines;
+        if (!map.getSource("tx-lines")) {
+          map.addSource("tx-lines", { type: "geojson", data: lines, tolerance: 0.6, buffer: 32 });
+          map.addLayer({
+            id: "tx-lines",
+            type: "line",
+            source: "tx-lines",
+            layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["to-number", ["get", "voltage"], 0] },
+            paint: {
+              "line-color": voltageColor,
+              "line-opacity": dark ? 0.9 : 0.85,
+              "line-width": [
+                "interpolate", ["linear"], ["zoom"],
+                3, ["case", [">=", ["to-number", ["get", "voltage"], 0], 345], 1.0, 0.5],
+                6, ["case", [">=", ["to-number", ["get", "voltage"], 0], 345], 1.8, 0.9],
+                10, ["case", [">=", ["to-number", ["get", "voltage"], 0], 345], 3.0, 1.8]
+              ]
+            }
+          });
+          // Invisible, wider layer to make lines easy to click.
+          map.addLayer({
+            id: "tx-lines-hit",
+            type: "line",
+            source: "tx-lines",
+            paint: { "line-color": "#000", "line-opacity": 0, "line-width": 8 }
+          });
+        }
+      } catch (error) { showError(error); }
+
+      try {
+        const plants = await data.plants;
+        if (!map.getSource("power-plants")) {
+          map.addSource("power-plants", { type: "geojson", data: plants });
+          map.addLayer({
+            id: "power-plants",
+            type: "circle",
+            source: "power-plants",
+            paint: {
+              "circle-color": fuelColor,
+              "circle-radius": [
+                "interpolate", ["linear"], ["zoom"],
+                3, ["interpolate", ["linear"], ["sqrt", ["max", 0, ["to-number", ["get", "summer_capacity"], 0]]], 0, 1.2, 60, 9],
+                10, ["interpolate", ["linear"], ["sqrt", ["max", 0, ["to-number", ["get", "summer_capacity"], 0]]], 0, 3, 60, 22]
+              ],
+              "circle-opacity": 0.78,
+              "circle-stroke-color": dark ? "#0f1a22" : "#ffffff",
+              "circle-stroke-width": 0.6
+            }
+          });
+        }
+      } catch (error) { showError(error); }
+
+      applyMode();
+    }
+
+    map.on("style.load", addDataLayers);
+
+    map.on("click", "tx-lines-hit", e => {
+      const p = e.features[0].properties;
+      new mapboxgl.Popup({ maxWidth: "280px" })
+        .setLngLat(e.lngLat)
+        .setHTML(popupHtml(p.line_id ? `Transmission line ${p.line_id}` : "Transmission line", [
+          ["Voltage", p.voltage && Number(p.voltage) > 0 ? `${p.voltage} kV` : null],
+          ["Owner", p.owner],
+          ["Status", p.status],
+          ["From", p.from_substation],
+          ["To", p.to_substation]
+        ]))
+        .addTo(map);
+    });
+
+    map.on("click", "power-plants", e => {
+      const p = e.features[0].properties;
+      new mapboxgl.Popup({ maxWidth: "280px" })
+        .setLngLat(e.features[0].geometry.coordinates)
+        .setHTML(popupHtml(p.name || "Power plant", [
+          ["Capacity", p.summer_capacity ? `${p.summer_capacity} MW` : null],
+          ["Primary fuel", p.primary_fuel],
+          ["Operator", p.operator],
+          ["Location", [p.city, p.state].filter(Boolean).join(", ")],
+          ["Status", p.status]
+        ]))
+        .addTo(map);
+    });
+
+    ["tx-lines-hit", "power-plants"].forEach(id => {
+      map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
+    });
+
+    ui.plantsButton.addEventListener("click", () => switchMode("plants"));
+    ui.networkButton.addEventListener("click", () => switchMode("network"));
+    ui.themeButton.addEventListener("click", () => {
+      activeTheme = activeTheme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = activeTheme;
+      localStorage.setItem("dart-map-theme", activeTheme);
+      ui.themeButton.setAttribute("aria-label", activeTheme === "dark" ? "Switch to light theme" : "Switch to dark theme");
+      map.setStyle(STYLES[activeTheme]);
+    });
+
+    switchMode("plants");
+  </script>
+</body>
+</html>
