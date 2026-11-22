@@ -6,13 +6,17 @@
 - **"Power Plant"** → **"Power Plants Map"**
 - **"Substations & Tx Lines"** → **"Infrastructure Map"**
 
+### Power Plants Data
+- The map uses the **Operating**, **Planned**, **Retired**, **Canceled or Postponed**, **Operating_PR**, **Planned_PR**, and **Retired_PR** sheets of `data/power_plants/september_generator2026.xlsx`.
+- Each coordinate-valid sheet row is shown independently; repeated Plant IDs are not grouped. Operating rows are shown by default.
+- Side-by-side Planned and Retired controls include their Puerto Rico records; a centered Canceled/Postponed control selects that sheet. Technology **Only [+]** filtering remains available in each view.
+- Popups show the selected row's source columns, status, technology, fuel, capacity, and location.
+
 ### 2. ✅ Transmission Lines Data Optimization
-- **Created**: `convert_tx_lines.py` - Converts transmission lines from ESRI Shapefile format to optimized GeoJSON
-- **Output**: `transmission_lines.geojson` (27.45 MB)
-  - 51,155 transmission line features
-  - Filtered to 115 kV and above
-  - Geometry simplified using Douglas-Peucker algorithm for fast rendering
-  - Voltage-level metadata preserved for visualization
+- The active map serves the complete `data/tx_lines/tx_lines_complete_hifld.geojson` file.
+  - 94,619 transmission line features, including unknown and lower-voltage lines
+  - HIFLD voltage and line attributes normalized for map styling and popups
+  - Unknown voltages are shown as **Other** in the voltage legend
 
 ### 3. ✅ Map Styling & Performance Improvements
 - **Leaflet + Canvas Rendering**: 
@@ -41,12 +45,11 @@
 ### 6. ✅ File Structure
 ```
 dart-tool/src/dart_tool/
-├── map.html                      # Updated with new button names
-├── map.py                        # Updated server with /api/transmission-lines-geojson endpoint
-├── convert_tx_lines.py           # Conversion script (utility)
+├── map_v2.html                   # Active Mapbox GL JS map
+├── map.py                        # Local map server
 └── data/
-    ├── transmission_lines.geojson # Pre-computed optimized GeoJSON (27.45 MB)
-    └── tx_lines/                 # Original ESRI Shapefile format (retained for reference)
+    └── tx_lines/
+        └── tx_lines_complete_hifld.geojson  # Active complete HIFLD transmission data
 ```
 
 ## Technical Details
@@ -75,7 +78,7 @@ dart-tool/src/dart_tool/
 
 ## Next Steps (Optional Future Enhancements)
 
-1. Add substations layer with canvas rendering (currently commented out in map.html due to 79,000+ records)
+1. Consider further optimizing rendering for large infrastructure datasets
 2. Implement MBTiles format for even better performance
 3. Add power plant filters by fuel type
 4. Add transmission line click popups with detailed metadata

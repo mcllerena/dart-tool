@@ -6,12 +6,13 @@ import argparse
 import csv
 import gzip
 import json
+import logging
 import math
 import os
-import struct
-import threading
+import posixpath
 import webbrowser
-from dataclasses import dataclass
+import xml.etree.ElementTree as ET
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -26,30 +27,28 @@ DEFAULT_MAPBOX_TOKEN = (
     "pk.eyJ1IjoibWNsbGVyZW5hIiwiYSI6ImNtd3F1M2cyNDB6bTAzMHB4emluMGtxdmEifQ."
     "i-EY2QOnI4Vs2KH9NokNmw"
 )
-GEOJSON_PATH = DATA_DIR / "transmission_lines.geojson"
-EARTH_RADIUS_METERS = 6_378_137.0
-WEB_MERCATOR_LIMIT = 20_037_508.342789244
-WEB_MERCATOR_CIRCUMFERENCE = 2 * math.pi * EARTH_RADIUS_METERS
+GEOJSON_PATH = DATA_DIR / "tx_lines" / "tx_lines_complete_hifld.geojson"
+PLANT_SHEET_STATUSES = {
+    "Operating": "operating",
+    "Operating_PR": "operating",
+    "Planned": "planned",
+    "Planned_PR": "planned",
+    "Retired": "retired",
+    "Retired_PR": "retired",
+    "Canceled or Postponed": "canceled",
+}
+PLANT_STATUS_FILES = {
+    "operating": ("us_operating_pp.geojson", "pr_operating_pp.geojson"),
+    "planned": ("us_planned_pp.geojson", "pr_planned_pp.geojson"),
+    "retired": ("us_retired_pp.geojson", "pr_retired_pp.geojson"),
+    "canceled": ("us_canceled_pp.geojson",),
+}
+XLSX_MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+XLSX_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+XLSX_PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+logger = logging.getLogger(__name__)
 
 POINT_LAYERS = {
-    "power-plants": {
-        "filename": DATA_DIR / "power_plants" / "Power_Plants.csv",
-        "latitude": "LATITUDE",
-        "longitude": "LONGITUDE",
-        "properties": {
-            "plant_code": "PLANT_CODE",
-            "name": "NAME",
-            "city": "CITY",
-            "state": "STATE",
-            "status": "STATUS",
-            "type": "TYPE",
-            "primary_fuel": "PRIM_FUEL",
-            "secondary_fuel": "SEC_FUEL",
-            "summer_capacity": "SUMMER_CAP",
-            "operator": "OPERATOR",
-        },
-        "numeric": {"summer_capacity"},
-    },
     "substations": {
         "filename": DATA_DIR / "substations" / "Substations.csv",
         "latitude": "LATITUDE",
@@ -68,37 +67,284 @@ POINT_LAYERS = {
     },
 }
 
-DBF_LINE_FIELDS = {
-    "ID",
-    "TYPE",
-    "STATUS",
-    "OWNER",
-    "VOLTAGE",
-    "VOLT_CLASS",
-    "SUB_1",
-    "SUB_2",
-}
 
-
-@dataclass(frozen=True)
-class LineRecord:
-    row_index: int
-    content_offset: int
-    content_length: int
-    xmin: float
-    ymin: float
-    xmax: float
-    ymax: float
-
-
-def _number(value: str | None) -> float | None:
-    if not value:
+def _number(value: Any) -> float | None:
+    if value is None or (isinstance(value, str) and not value.strip()):
         return None
     try:
         parsed = float(value)
     except ValueError:
         return None
     return parsed if math.isfinite(parsed) else None
+
+
+def _column_index(cell_reference: str) -> int:
+    column = 0
+    for character in cell_reference:
+        if not character.isalpha():
+            break
+        column = column * 26 + ord(character.upper()) - ord("A") + 1
+    if column == 0:
+        raise ValueError(f"Invalid Excel cell reference: {cell_reference}")
+    return column - 1
+
+
+def _read_shared_strings(archive: zipfile.ZipFile) -> list[str]:
+    shared_strings_path = "xl/sharedStrings.xml"
+    if shared_strings_path not in archive.namelist():
+        return []
+
+    shared_strings = []
+    item_tag = f"{{{XLSX_MAIN_NS}}}si"
+    text_tag = f"{{{XLSX_MAIN_NS}}}t"
+    with archive.open(shared_strings_path) as source:
+        for _, element in ET.iterparse(source, events=("end",)):
+            if element.tag == item_tag:
+                shared_strings.append(
+                    "".join(text.text or "" for text in element.iter(text_tag))
+                )
+                element.clear()
+    return shared_strings
+
+
+def _xlsx_cell_value(cell: ET.Element, shared_strings: list[str]) -> Any:
+    cell_type = cell.attrib.get("t")
+    if cell_type == "inlineStr":
+        text_tag = f"{{{XLSX_MAIN_NS}}}t"
+        return "".join(text.text or "" for text in cell.iter(text_tag))
+
+    value_element = cell.find(f"{{{XLSX_MAIN_NS}}}v")
+    if value_element is None or value_element.text is None:
+        return None
+
+    value = value_element.text
+    if cell_type == "s":
+        try:
+            return shared_strings[int(value)]
+        except (IndexError, ValueError) as error:
+            raise ValueError(f"Invalid shared string index in cell {cell.attrib.get('r')}") from error
+    if cell_type in {"str", "e"}:
+        return value
+
+    number = _number(value)
+    if number is None:
+        return value
+    return int(number) if number.is_integer() else number
+
+
+def _workbook_sheet_path(archive: zipfile.ZipFile, sheet_name: str) -> str:
+    relationship_id = f"{{{XLSX_REL_NS}}}id"
+    sheet_tag = f"{{{XLSX_MAIN_NS}}}sheet"
+    relationship_tag = f"{{{XLSX_PACKAGE_REL_NS}}}Relationship"
+
+    workbook = ET.fromstring(archive.read("xl/workbook.xml"))
+    sheet = next(
+        (element for element in workbook.iter(sheet_tag) if element.attrib.get("name") == sheet_name),
+        None,
+    )
+    if sheet is None:
+        raise ValueError(f"Workbook does not contain a {sheet_name!r} sheet")
+    relationship_id_value = sheet.attrib.get(relationship_id)
+    if not relationship_id_value:
+        raise ValueError(f"Workbook sheet {sheet_name!r} has no relationship")
+
+    relationships = ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+    target = next(
+        (
+            element.attrib.get("Target")
+            for element in relationships.iter(relationship_tag)
+            if element.attrib.get("Id") == relationship_id_value
+        ),
+        None,
+    )
+    if not target:
+        raise ValueError(f"Workbook sheet {sheet_name!r} has no worksheet target")
+    if target.startswith("/"):
+        return target.lstrip("/")
+    return posixpath.normpath(posixpath.join("xl", target))
+
+
+def _clean_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def read_plant_sheet_features(xlsx_path: Path, sheet_name: str) -> dict[str, Any]:
+    """Create one point feature for each coordinate-valid row in a plant sheet."""
+    required_columns = {
+        "Plant ID",
+        "Plant Name",
+        "Plant State",
+        "County",
+        "Generator ID",
+        "Technology",
+        "Energy Source Code",
+        "Prime Mover Code",
+        "Net Summer Capacity (MW)",
+        "Latitude",
+        "Longitude",
+    }
+    columns = {
+        "name": "Plant Name",
+        "entity_id": "Entity ID",
+        "entity_name": "Entity Name",
+        "state": "Plant State",
+        "county": "County",
+        "status": "Status",
+        "technology": "Technology",
+        "energy_source": "Energy Source Code",
+        "prime_mover": "Prime Mover Code",
+        "balancing_authority": "Balancing Authority Code",
+        "sector": "Sector",
+        "operating_year": "Operating Year",
+        "planned_retirement_year": "Planned Retirement Year",
+    }
+    capacity_columns = {
+        "nameplate_capacity": "Nameplate Capacity (MW)",
+        "net_summer_capacity": "Net Summer Capacity (MW)",
+        "net_winter_capacity": "Net Winter Capacity (MW)",
+        "nameplate_energy_capacity": "Nameplate Energy Capacity (MWh)",
+        "dc_net_capacity": "DC Net Capacity (MW)",
+    }
+    cell_tag = f"{{{XLSX_MAIN_NS}}}c"
+    row_tag = f"{{{XLSX_MAIN_NS}}}row"
+    features = []
+    rows_without_coordinates = 0
+
+    with zipfile.ZipFile(xlsx_path) as archive:
+        shared_strings = _read_shared_strings(archive)
+        worksheet_path = _workbook_sheet_path(archive, sheet_name)
+        with archive.open(worksheet_path) as worksheet:
+            headers: dict[int, str] | None = None
+            for _, row_element in ET.iterparse(worksheet, events=("end",)):
+                if row_element.tag != row_tag:
+                    continue
+                row_number = int(row_element.attrib.get("r", "0"))
+                values = {
+                    _column_index(cell.attrib["r"]): _xlsx_cell_value(cell, shared_strings)
+                    for cell in row_element.findall(cell_tag)
+                    if "r" in cell.attrib
+                }
+
+                if row_number == 3:
+                    headers = {
+                        index: text
+                        for index, value in values.items()
+                        if (text := _clean_text(value)) is not None
+                    }
+                    missing_columns = required_columns - set(headers.values())
+                    if missing_columns:
+                        raise ValueError(
+                            "Operating sheet is missing required columns: "
+                            + ", ".join(sorted(missing_columns))
+                        )
+                elif row_number > 3:
+                    if headers is None:
+                        raise ValueError("Operating sheet has no column header row")
+                    row = {
+                        header: values.get(index)
+                        for index, header in headers.items()
+                    }
+                    plant_id = _clean_text(row.get("Plant ID"))
+                    plant_number = _number(plant_id)
+                    if plant_number is not None and plant_number.is_integer():
+                        plant_id = str(int(plant_number))
+
+                    latitude = _number(row.get("Latitude"))
+                    longitude = _number(row.get("Longitude"))
+                    if (
+                        latitude is None
+                        or longitude is None
+                        or not -90 <= latitude <= 90
+                        or not -180 <= longitude <= 180
+                    ):
+                        rows_without_coordinates += 1
+                        row_element.clear()
+                        continue
+
+                    workbook_fields = {}
+                    for column_name in headers.values():
+                        value = _clean_text(row.get(column_name))
+                        if value is not None:
+                            workbook_fields[column_name] = [value]
+
+                    properties: dict[str, Any] = {
+                        "plant_id": plant_id,
+                        "sheet_status": PLANT_SHEET_STATUSES.get(
+                            sheet_name, sheet_name.lower()
+                        ),
+                        "workbook_fields": workbook_fields,
+                    }
+                    for output_name, column_name in columns.items():
+                        value = _clean_text(row.get(column_name))
+                        properties[output_name] = value
+
+                    status = properties["status"]
+                    technology = properties["technology"]
+                    energy_source = properties["energy_source"]
+                    prime_mover = properties["prime_mover"]
+                    balancing_authority = properties["balancing_authority"]
+                    sector = properties["sector"]
+                    properties.update(
+                        {
+                            "statuses": [status] if status else [],
+                            "type": technology,
+                            "technologies": [technology] if technology else [],
+                            "primary_fuel": energy_source,
+                            "energy_sources": [energy_source] if energy_source else [],
+                            "prime_movers": [prime_mover] if prime_mover else [],
+                            "balancing_authorities": (
+                                [balancing_authority] if balancing_authority else []
+                            ),
+                            "sectors": [sector] if sector else [],
+                        }
+                    )
+
+                    for output_name, column_name in capacity_columns.items():
+                        properties[output_name] = _number(row.get(column_name))
+
+                    operating_year = _number(row.get("Operating Year"))
+                    retirement_year = _number(row.get("Planned Retirement Year"))
+                    properties["operating_years"] = (
+                        [int(operating_year)] if operating_year is not None else []
+                    )
+                    properties["planned_retirement_years"] = (
+                        [int(retirement_year)] if retirement_year is not None else []
+                    )
+                    properties["summer_capacity"] = properties["net_summer_capacity"]
+
+                    features.append(
+                        {
+                            "type": "Feature",
+                            "id": f"{sheet_name.lower()}-{row_number}",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [longitude, latitude],
+                            },
+                            "properties": properties,
+                        }
+                    )
+
+                row_element.clear()
+
+    if headers is None:
+        raise ValueError("Operating sheet has no column header row")
+
+    if rows_without_coordinates:
+        logger.warning(
+            "Skipped %s %s rows without valid coordinates from %s",
+            rows_without_coordinates,
+            sheet_name,
+            xlsx_path,
+        )
+    return {"type": "FeatureCollection", "features": features}
+
+
+def read_operating_plant_features(xlsx_path: Path) -> dict[str, Any]:
+    """Create one point feature for each coordinate-valid Operating sheet row."""
+    return read_plant_sheet_features(xlsx_path, "Operating")
 
 
 def read_point_features(csv_path: Path, layer_name: str) -> dict[str, Any]:
@@ -139,239 +385,14 @@ def read_point_features(csv_path: Path, layer_name: str) -> dict[str, Any]:
     return {"type": "FeatureCollection", "features": features}
 
 
-def projected_to_lonlat(x: float, y: float) -> tuple[float, float]:
-    """Convert a WGS 84 Web Mercator coordinate into GeoJSON lon/lat."""
-    longitude = math.degrees(x / EARTH_RADIUS_METERS)
-    bounded_y = min(WEB_MERCATOR_LIMIT, max(-WEB_MERCATOR_LIMIT, y))
-    latitude = math.degrees(
-        2 * math.atan(math.exp(bounded_y / EARTH_RADIUS_METERS)) - math.pi / 2
-    )
-    return longitude, latitude
-
-
-def _lonlat_to_projected(longitude: float, latitude: float) -> tuple[float, float]:
-    longitude = min(180.0, max(-180.0, longitude))
-    latitude = min(85.05112878, max(-85.05112878, latitude))
-    x = EARTH_RADIUS_METERS * math.radians(longitude)
-    y = EARTH_RADIUS_METERS * math.log(
-        math.tan(math.pi / 4 + math.radians(latitude) / 2)
-    )
-    return x, y
-
-
-def _simplify_line(
-    points: list[tuple[float, float]], tolerance: float
-) -> list[tuple[float, float]]:
-    """Simplify a line with iterative Ramer-Douglas-Peucker."""
-    if len(points) <= 2:
-        return points
-
-    tolerance_squared = tolerance * tolerance
-    keep = {0, len(points) - 1}
-    pending = [(0, len(points) - 1)]
-    while pending:
-        start, end = pending.pop()
-        start_x, start_y = points[start]
-        end_x, end_y = points[end]
-        dx = end_x - start_x
-        dy = end_y - start_y
-        length_squared = dx * dx + dy * dy
-        greatest_distance = tolerance_squared
-        greatest_index = -1
-
-        for index in range(start + 1, end):
-            x, y = points[index]
-            if length_squared == 0:
-                distance_squared = (x - start_x) ** 2 + (y - start_y) ** 2
-            else:
-                fraction = max(
-                    0.0,
-                    min(
-                        1.0,
-                        ((x - start_x) * dx + (y - start_y) * dy)
-                        / length_squared,
-                    ),
-                )
-                nearest_x = start_x + fraction * dx
-                nearest_y = start_y + fraction * dy
-                distance_squared = (x - nearest_x) ** 2 + (y - nearest_y) ** 2
-            if distance_squared > greatest_distance:
-                greatest_distance = distance_squared
-                greatest_index = index
-
-        if greatest_index >= 0:
-            keep.add(greatest_index)
-            pending.append((start, greatest_index))
-            pending.append((greatest_index, end))
-
-    return [point for index, point in enumerate(points) if index in keep]
-
-
-def parse_polyline_content(
-    content: bytes, tolerance: float
-) -> list[list[tuple[float, float]]]:
-    """Parse and simplify a single ESRI Shapefile PolyLine record."""
-    if len(content) < 44:
-        raise ValueError("Polyline record is shorter than its fixed header")
-    shape_type, = struct.unpack_from("<i", content, 0)
-    if shape_type != 3:
-        raise ValueError(f"Expected PolyLine shape type 3, found {shape_type}")
-
-    part_count, point_count = struct.unpack_from("<ii", content, 36)
-    if part_count < 1 or point_count < 2:
-        return []
-    parts_end = 44 + part_count * 4
-    expected_length = parts_end + point_count * 16
-    if expected_length > len(content):
-        raise ValueError("Polyline record declares more coordinates than it contains")
-
-    part_starts = [
-        start
-        for (start,) in struct.iter_unpack(
-            "<i", content[44:parts_end]
-        )
-    ]
-    if part_starts[0] != 0 or any(
-        start < 0 or start >= point_count for start in part_starts
-    ):
-        raise ValueError("Polyline record contains invalid part offsets")
-    point_data = content[parts_end:expected_length]
-    points = list(struct.iter_unpack("<dd", point_data))
-
-    lines = []
-    for part_index, start in enumerate(part_starts):
-        end = (
-            part_starts[part_index + 1]
-            if part_index + 1 < len(part_starts)
-            else point_count
-        )
-        if end <= start:
-            continue
-        simplified = _simplify_line(points[start:end], tolerance)
-        if len(simplified) >= 2:
-            lines.append([projected_to_lonlat(x, y) for x, y in simplified])
-    return lines
-
-
-def _read_dbf_rows(dbf_path: Path) -> list[dict[str, Any]]:
-    """Read only the transmission-line attributes used by map popups."""
-    rows = []
-    with dbf_path.open("rb") as source:
-        header = source.read(32)
-        if len(header) != 32:
-            raise ValueError(f"Invalid DBF header: {dbf_path}")
-        record_count = struct.unpack_from("<I", header, 4)[0]
-        header_length, record_length = struct.unpack_from("<HH", header, 8)
-
-        fields = []
-        while source.tell() < header_length:
-            descriptor = source.read(32)
-            if not descriptor or descriptor[0] == 0x0D:
-                break
-            name = descriptor[:11].split(b"\0", 1)[0].decode("ascii")
-            fields.append(
-                (
-                    name,
-                    chr(descriptor[11]),
-                    descriptor[16],
-                    descriptor[17],
-                    name in DBF_LINE_FIELDS,
-                )
-            )
-        source.seek(header_length)
-
-        for _ in range(record_count):
-            record = source.read(record_length)
-            if len(record) != record_length:
-                raise ValueError(f"Truncated DBF records: {dbf_path}")
-            values: dict[str, Any] = {}
-            offset = 1
-            for name, field_type, field_length, decimals, include in fields:
-                raw = record[offset : offset + field_length].decode(
-                    "cp1252", errors="replace"
-                ).strip()
-                offset += field_length
-                if not include:
-                    continue
-                if not raw or raw == "*":
-                    values[name] = None
-                elif field_type in {"N", "F"}:
-                    try:
-                        number = float(raw)
-                    except ValueError:
-                        values[name] = raw
-                    else:
-                        values[name] = (
-                            int(number)
-                            if field_type == "N" and decimals == 0
-                            else number
-                        )
-                else:
-                    values[name] = raw
-            rows.append(values)
-    return rows
-
-
-def _build_line_index(shapefile_path: Path) -> tuple[list[LineRecord], int]:
-    """Index shapefile record bounds without retaining the large geometries."""
-    index = []
-    record_count = 0
-    with shapefile_path.open("rb") as source:
-        header = source.read(100)
-        if len(header) != 100:
-            raise ValueError(f"Invalid shapefile header: {shapefile_path}")
-        shape_type, = struct.unpack_from("<i", header, 32)
-        if shape_type != 3:
-            raise ValueError(
-                f"Expected a PolyLine shapefile (shape type 3), found {shape_type}"
-            )
-
-        while True:
-            record_header = source.read(8)
-            if not record_header:
-                break
-            if len(record_header) != 8:
-                raise ValueError(f"Truncated shapefile record header: {shapefile_path}")
-            _, content_words = struct.unpack(">ii", record_header)
-            content_length = content_words * 2
-            if content_length < 4:
-                raise ValueError(f"Invalid shapefile record length: {content_length}")
-            content_offset = source.tell()
-            fixed_header = source.read(min(content_length, 36))
-            if len(fixed_header) != min(content_length, 36):
-                raise ValueError(f"Truncated shapefile record: {shapefile_path}")
-            shape, = struct.unpack_from("<i", fixed_header, 0)
-            if shape == 3:
-                if content_length < 44:
-                    raise ValueError("Polyline record is shorter than its fixed header")
-                xmin, ymin, xmax, ymax = struct.unpack_from(
-                    "<dddd", fixed_header, 4
-                )
-                index.append(
-                    LineRecord(
-                        row_index=record_count,
-                        content_offset=content_offset,
-                        content_length=content_length,
-                        xmin=xmin,
-                        ymin=ymin,
-                        xmax=xmax,
-                        ymax=ymax,
-                    )
-                )
-            source.seek(content_offset + content_length)
-            record_count += 1
-    return index, record_count
-
-
 class MapRepository:
     def __init__(self, data_dir: Path = DATA_DIR) -> None:
         self.data_dir = data_dir
         self._point_cache: dict[str, dict[str, Any]] = {}
-        self._line_index: list[LineRecord] | None = None
-        self._line_properties: list[dict[str, Any]] | None = None
-        self._line_lock = threading.Lock()
 
     def points(self, layer_name: str) -> dict[str, Any]:
+        if layer_name == "power-plants":
+            return self.plant_features("operating")
         if layer_name not in POINT_LAYERS:
             raise ValueError(f"Unsupported point layer: {layer_name}")
         if layer_name not in self._point_cache:
@@ -381,6 +402,32 @@ class MapRepository:
                 layer_name,
             )
         return self._point_cache[layer_name]
+
+    def plant_features(self, status: str) -> dict[str, Any]:
+        if status not in PLANT_STATUS_FILES:
+            raise ValueError(f"Unsupported power plant status: {status}")
+        cache_key = f"power-plants:{status}"
+        if cache_key not in self._point_cache:
+            features = []
+            for filename in PLANT_STATUS_FILES[status]:
+                path = self.data_dir / "power_plants" / filename
+                collection = json.loads(path.read_text(encoding="utf-8"))
+                if collection.get("type") != "FeatureCollection":
+                    raise ValueError(f"{path.name} is not a GeoJSON FeatureCollection")
+                sheet_features = collection.get("features")
+                if not isinstance(sheet_features, list):
+                    raise ValueError(f"{path.name} has no GeoJSON features array")  # noqa: TRY004
+                if any(
+                    feature.get("properties", {}).get("sheet_status") != status
+                    for feature in sheet_features
+                ):
+                    raise ValueError(f"{path.name} contains an unexpected plant status")
+                features.extend(sheet_features)
+            self._point_cache[cache_key] = {
+                "type": "FeatureCollection",
+                "features": features,
+            }
+        return self._point_cache[cache_key]
 
     def iso_regions(self) -> dict[str, Any]:
         features = []
@@ -412,150 +459,6 @@ class MapRepository:
                 features.append(enriched)
         return {"type": "FeatureCollection", "features": features}
 
-    def _ensure_line_index(self) -> None:
-        if self._line_index is not None and self._line_properties is not None:
-            return
-        with self._line_lock:
-            if self._line_index is not None and self._line_properties is not None:
-                return
-            line_dir = self.data_dir / "tx_lines"
-            shapefile_path = line_dir / "Electric_Power_Transmission_Lines_A.shp"
-            dbf_path = line_dir / "Electric_Power_Transmission_Lines_A.dbf"
-            line_index, record_count = _build_line_index(shapefile_path)
-            line_properties = _read_dbf_rows(dbf_path)
-            if record_count != len(line_properties):
-                raise ValueError(
-                    "Transmission shapefile and DBF record counts do not match "
-                    f"({record_count} != {len(line_properties)})"
-                )
-            self._line_index = line_index
-            self._line_properties = line_properties
-
-    def transmission_lines(
-        self, iso: str | None = None, bbox: tuple[float, float, float, float] | None = None, zoom: float | None = None
-    ) -> dict[str, Any]:
-        self._ensure_line_index()
-        line_index = self._line_index
-        line_properties = self._line_properties
-        if line_index is None or line_properties is None:
-            raise RuntimeError("Transmission line index did not initialize")
-
-        # ISO-based filtering
-        if iso:
-            iso_regions = {
-                "caiso": (-124, 32, -114, 43),
-                "ercot": (-104, 25, -93, 36),
-                "frcc": (-87, 24, -79, 29),
-                "isone": (-73, 41, -67, 46),
-                "miso": (-102, 36, -79, 49),
-                "northerngrid": (-104, 42, -99, 46),
-                "nyiso": (-80, 40, -71, 45),
-                "pjm": (-84, 38, -73, 43),
-                "sertp": (-88, 31, -78, 40),
-                "spp": (-104, 30, -93, 44),
-                "westconnect": (-125, 30, -104, 50),
-            }
-            if iso not in iso_regions:
-                raise ValueError(f"Unknown ISO region: {iso}")
-            bbox = iso_regions[iso]
-            zoom = 5.0  # Default zoom for ISO queries
-
-        if bbox is None:
-            raise ValueError("Either iso or bbox must be specified")
-
-        west, south, east, north = bbox
-        min_x, min_y = _lonlat_to_projected(west, south)
-        max_x, max_y = _lonlat_to_projected(east, north)
-        
-        tolerance = max(
-            50.0,
-            WEB_MERCATOR_CIRCUMFERENCE
-            / (256 * 2 ** max(0.0, min(zoom or 5.0, 22.0)))
-            * 2.0,
-        )
-        
-        min_voltage = 0
-        if zoom is None or zoom < 6:
-            min_voltage = 115
-        elif zoom < 8:
-            min_voltage = 69
-        elif zoom < 10:
-            min_voltage = 20
-
-        features = []
-        with (
-            self.data_dir.joinpath(
-                "tx_lines", "Electric_Power_Transmission_Lines_A.shp"
-            ).open("rb") as source
-        ):
-            for record in line_index:
-                if (
-                    record.xmax < min_x
-                    or record.xmin > max_x
-                    or record.ymax < min_y
-                    or record.ymin > max_y
-                ):
-                    continue
-                source.seek(record.content_offset)
-                content = source.read(record.content_length)
-                lines = parse_polyline_content(content, tolerance)
-                if not lines:
-                    continue
-                properties = line_properties[record.row_index]
-                
-                voltage = properties.get("VOLTAGE")
-                if voltage:
-                    try:
-                        v = float(voltage)
-                        if v < min_voltage:
-                            continue
-                    except (ValueError, TypeError):
-                        pass
-                
-                feature_properties = {
-                    "line_id": properties.get("ID"),
-                    "type": properties.get("TYPE"),
-                    "status": properties.get("STATUS"),
-                    "owner": properties.get("OWNER"),
-                    "voltage": properties.get("VOLTAGE"),
-                    "voltage_class": properties.get("VOLT_CLASS"),
-                    "from_substation": properties.get("SUB_1"),
-                    "to_substation": properties.get("SUB_2"),
-                }
-                features.append(
-                    {
-                        "type": "Feature",
-                        "id": record.row_index + 1,
-                        "geometry": {
-                            "type": "LineString" if len(lines) == 1 else "MultiLineString",
-                            "coordinates": lines[0] if len(lines) == 1 else lines,
-                        },
-                        "properties": feature_properties,
-                    }
-                )
-        return {"type": "FeatureCollection", "features": features}
-
-
-def _parse_bbox(query: dict[str, list[str]]) -> tuple[float, float, float, float]:
-    values = query.get("bbox", [])
-    if len(values) != 1:
-        raise ValueError("A bbox query parameter is required")
-    parts = values[0].split(",")
-    if len(parts) != 4:
-        raise ValueError("bbox must contain west,south,east,north")
-    bbox = tuple(_number(value) for value in parts)
-    if any(value is None for value in bbox):
-        raise ValueError("bbox coordinates must be finite numbers")
-    west, south, east, north = bbox
-    west = max(-180, min(180, west))
-    east = max(-180, min(180, east))
-    south = max(-90, min(90, south))
-    north = max(-90, min(90, north))
-    if not (west < east and south < north):
-        raise ValueError("bbox bounds are degenerate (west must be less than east, south less than north)")
-    return west, south, east, north
-
-
 class MapHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = True
     daemon_threads = True
@@ -583,7 +486,13 @@ class MapRequestHandler(BaseHTTPRequestHandler):
             return
 
         if request.path == "/api/power-plants":
-            result = self.server.repository.points("power-plants")
+            status = parse_qs(request.query, keep_blank_values=True).get(
+                "status", ["operating"]
+            )[0]
+            if status not in PLANT_STATUS_FILES:
+                self.send_error(400, "Unsupported power plant status")
+                return
+            result = self.server.repository.plant_features(status)
         elif request.path == "/api/substations":
             result = self.server.repository.points("substations")
         elif request.path == "/api/iso-regions":
@@ -595,33 +504,6 @@ class MapRequestHandler(BaseHTTPRequestHandler):
                 return
             self._send_file(GEOJSON_PATH, "application/geo+json; charset=utf-8")
             return
-        elif request.path == "/api/transmission-lines":
-            query = parse_qs(request.query)
-            iso = None
-            bbox = None
-            zoom = None
-            
-            iso_values = query.get("iso", [])
-            if iso_values and len(iso_values) == 1:
-                iso = iso_values[0]
-            
-            if not iso:
-                try:
-                    bbox = _parse_bbox(query)
-                    zoom_values = query.get("zoom", [])
-                    if len(zoom_values) == 1:
-                        zoom = _number(zoom_values[0])
-                        if zoom is None or not 0 <= zoom <= 22:
-                            raise ValueError("zoom must be a finite number between 0 and 22")
-                except ValueError as error:
-                    self.send_error(400, str(error))
-                    return
-            
-            try:
-                result = self.server.repository.transmission_lines(iso=iso, bbox=bbox, zoom=zoom)
-            except ValueError as error:
-                self.send_error(400, str(error))
-                return
         else:
             self.send_error(404, "Not found")
             return
@@ -657,7 +539,10 @@ class MapRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Encoding", content_encoding)
             self.send_header("Vary", "Accept-Encoding")
         self.end_headers()
-        self.wfile.write(payload)
+        try:
+            self.wfile.write(payload)
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError) as error:
+            logger.debug("Client disconnected while sending %s response: %s", content_type, error)
 
     def log_message(self, format_string: str, *args: Any) -> None:
         print(f"[map] {self.address_string()} - {format_string % args}")

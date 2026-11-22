@@ -11,18 +11,117 @@ locally. Use the navigation buttons to switch between **Power Plants Map** and
 **Infrastructure Map**. The theme control on the right switches between light
 and dark map styles.
 
+The panel in the top-left corner is the legend and filter for the active tab:
+
+- **Power Plants Map**: click a plant technology to show or hide it, and drag
+  the two capacity handles to limit plants to a range of 0 to 1000+ MW.
+- **Infrastructure Map**: click a voltage class to show or hide its
+  transmission lines and substations, and use **Show Substations** to turn the
+  substation dots on or off. Substations without a recorded voltage are not
+  shown.
+
+Click **Reset** next to a panel title to restore that tab's filters to their
+defaults. It is greyed out when nothing is filtered.
+
 The page (`src\dart_tool\map_v2.html`) is rendered with
 [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js) (WebGL). It reads the
-bundled power plant CSV, the ISO-region GeoJSON files, and a precompiled
-`src\dart_tool\data\transmission_lines.geojson`. Regenerate that file after
-updating the transmission line shapefile in `src\dart_tool\data\tx_lines`:
+preconverted power-plant GeoJSON files, the substation CSV, ISO-region GeoJSON
+files, and the complete
+`src\dart_tool\data\tx_lines\tx_lines_complete_hifld.geojson`.
+
+Each coordinate-valid generator row appears as its own map feature; rows with
+repeated Plant IDs are not grouped. The map opens on Operating rows. The
+side-by-side **Planned** and **Retired** buttons switch to those sheets,
+including their Puerto Rico records. A centered **Canceled/Postponed** button
+shows that sheet. Clicking the selected status button again returns to
+Operating. Technology **Only [+]** controls continue to filter the selected
+view. Each marker uses its row's coordinates and capacity, and its popup shows
+all non-empty columns from that workbook row.
+
+`src\dart_tool\excel2geojson.py` converts the workbook into one GeoJSON file per
+sheet, retaining the original column names and values as feature properties.
+It skips rows without valid latitude/longitude coordinates and writes each file
+atomically. The map requests only the active status group, which is cached in
+memory by the local server. Run the exporter again after updating the workbook:
 
 ```powershell
-python src\dart_tool\convert_tx_lines.py
+python src\dart_tool\excel2geojson.py
 ```
+
+The generated files are stored in
+`src\dart_tool\data\power_plants`: `us_operating_pp.geojson`,
+`us_planned_pp.geojson`, `us_retired_pp.geojson`, `us_canceled_pp.geojson`,
+`pr_operating_pp.geojson`, `pr_planned_pp.geojson`, and
+`pr_retired_pp.geojson`.
 
 No Python packages are needed. An internet connection is required for the
 Mapbox GL JS library and basemap tiles. Stop the local server with **Ctrl+C**.
+
+## Complete HIFLD transmission lines
+
+`src\dart_tool\fetch_hifld_tx_lines.py` downloads all records and geometries
+from the public [Transmission Lines (HIFLD) ArcGIS layer](https://www.arcgis.com/home/item.html?id=d77284d1a97a426eaf960bab4764999c&sublayer=0&dataTabView=table)
+and writes a WGS 84 GeoJSON FeatureCollection to
+`src\dart_tool\data\tx_lines\tx_lines_complete_hifld.geojson`. GeoJSON preserves
+the line geometries and attributes; no Python packages are required.
+
+```powershell
+python src\dart_tool\fetch_hifld_tx_lines.py
+```
+
+The ArcGIS layer currently reports 94,619 records, two fewer than the
+94,621-record target. The script reports this difference and exports every
+record currently available from the source.
+
+## NETL U.S. power plants
+
+`src\dart_tool\fetch_arcgis_power_plants.py` downloads the public
+[US_Power_Plants ArcGIS layer](https://arcgis.netl.doe.gov/portal/home/item.html?id=f4dc5f7fc1944f1eaac3e09f386d4f75&view=list&sortOrder=desc&sortField=defaultFSOrder#data)
+and exports all attributes and WGS 84 point geometries to:
+
+- `src\dart_tool\data\power_plants\power_plants_arcgis_data.geojson`
+- `src\dart_tool\data\power_plants\power_plants_arcgis_data.csv`
+
+The CSV includes a `geometry` column containing the point geometry as compact
+GeoJSON (or `null` when the source has no coordinates), in addition to the
+source attributes. The ArcGIS layer currently reports 14,006 plants.
+
+```powershell
+python src\dart_tool\fetch_arcgis_power_plants.py
+```
+
+These are separate exports. The map uses the Operating, Planned, Retired,
+Canceled or Postponed, Operating_PR, Planned_PR, and Retired_PR sheets of
+`september_generator2026.xlsx`; `Power_Plants.csv` remains available as a
+separate dataset.
+
+## OpenStreetMap power data
+
+`src\dart_tool\fetch_osm_power.py` downloads the OpenStreetMap power
+infrastructure shown in the Power layer of
+[Open Infrastructure Map](https://openinframap.org) (the same public data the
+GridStatus infrastructure map is derived from) and saves it to
+`src\dart_tool\data\osm`:
+
+| File                    | Contents                                                       |
+| ----------------------- | -------------------------------------------------------------- |
+| `power_lines.geojson`   | Transmission lines and cables (voltage, operator, circuits, …) |
+| `substations.geojson`   | Substations as points (name, operator, voltage, type)          |
+| `power_plants.geojson`  | Power plants as points (name, source, output in MW)            |
+| `metadata.json`         | Source, license, download date and feature counts              |
+
+```powershell
+python src\dart_tool\fetch_osm_power.py --tile-size 4         # whole U.S. (several hours)
+python src\dart_tool\fetch_osm_power.py --bbox=-71.9,41.1,-71.1,42.1   # small test area
+python src\dart_tool\fetch_osm_power.py --merge-only          # rebuild files from the cache
+```
+
+The script queries the public Overpass API tile by tile and caches each tile in
+`data\osm\tiles`, so rerunning the same command after an interruption only
+downloads the missing tiles. Add `--include-minor-lines` to also export
+distribution lines. The data is © OpenStreetMap contributors under the
+[ODbL](https://www.openstreetmap.org/copyright); keep that attribution wherever
+it is displayed.
 
 ## Mapbox access token
 

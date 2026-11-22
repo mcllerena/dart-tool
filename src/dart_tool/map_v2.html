@@ -17,6 +17,7 @@
       --shadow: 0 12px 36px rgba(34, 52, 65, .12);
       --accent: #147d78;
       --accent-soft: #e4f5f2;
+      --track: #dbe2e7;
     }
 
     html[data-theme="dark"] {
@@ -29,6 +30,7 @@
       --shadow: 0 14px 40px rgba(0, 0, 0, .3);
       --accent: #69d3c4;
       --accent-soft: rgba(68, 173, 159, .16);
+      --track: #34444f;
     }
 
     * { box-sizing: border-box; }
@@ -51,8 +53,8 @@
       display: grid;
       grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
       align-items: center;
-      min-height: 76px;
-      padding: 0 30px;
+      min-height: 60px;
+      padding: 0 24px;
       background: var(--surface-strong);
       border-bottom: 1px solid var(--surface-border);
       box-shadow: 0 2px 14px rgba(28, 48, 62, .05);
@@ -69,8 +71,8 @@
 
     .brand-mark {
       display: grid;
-      width: 38px;
-      height: 38px;
+      width: 32px;
+      height: 32px;
       place-items: center;
       color: #fff;
       background: linear-gradient(145deg, #178d83, #246b82);
@@ -78,10 +80,96 @@
       box-shadow: 0 5px 13px rgba(25, 122, 119, .23);
     }
 
-    .brand-mark svg { width: 21px; height: 21px; }
+    .brand-mark svg { width: 18px; height: 18px; }
     .brand-copy { display: grid; gap: 2px; }
     .brand-name { font-size: 15px; font-weight: 750; letter-spacing: -.025em; }
     .brand-subtitle { color: var(--muted); font-size: 9px; font-weight: 750; letter-spacing: .13em; }
+
+    .brand-group { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .about-button {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      place-items: center;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+    .about-button:hover { color: var(--accent); background: var(--accent-soft); }
+    .about-button svg { width: 18px; height: 18px; }
+
+    .about-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(15, 26, 34, .28);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      animation: fade-in .18s ease;
+    }
+    .about-overlay[hidden] { display: none; }
+    .about-dialog {
+      position: relative;
+      width: min(480px, 100%);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      padding: 26px 28px 24px;
+      color: var(--ink);
+      background: var(--surface-strong);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .25);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .about-dialog h2 { margin: 0 0 4px; font-size: 18px; font-weight: 760; letter-spacing: -.02em; }
+    .about-lead { margin: 0 0 18px; color: var(--muted); }
+    .about-dialog h3 {
+      margin: 18px 0 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .about-source-heading { margin: 12px 0 6px; font-size: 13px; font-weight: 720; }
+    .about-dialog ul { display: grid; gap: 6px; margin: 0; padding-left: 18px; }
+    .about-sources { padding-left: 0 !important; list-style: none; }
+    .about-sources li {
+      display: grid;
+      gap: 2px;
+      padding: 10px 12px;
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+    }
+    .about-sources a { color: var(--accent); font-weight: 680; text-decoration: none; }
+    .about-sources a:hover { text-decoration: underline; }
+    .about-sources span { color: var(--muted); font-size: 12px; }
+    .about-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: grid;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      place-items: center;
+      color: var(--muted);
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .about-close:hover { color: var(--ink); background: var(--accent-soft); }
+    .about-close svg { width: 16px; height: 16px; }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
     .mode-switch {
       display: flex;
@@ -93,8 +181,8 @@
       display: flex;
       align-items: center;
       gap: 7px;
-      padding: 10px 16px;
-      min-height: 40px;
+      padding: 6px 14px;
+      min-height: 34px;
       color: var(--muted);
       background: transparent;
       border: 1px solid var(--surface-border);
@@ -133,8 +221,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 40px;
-      min-height: 40px;
+      width: 34px;
+      min-height: 34px;
       padding: 0;
       color: var(--muted);
       background: transparent;
@@ -157,7 +245,7 @@
 
     main {
       position: absolute;
-      inset: 76px 0 0 0;
+      inset: 60px 0 0 0;
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 0;
@@ -169,65 +257,293 @@
       background: #f0f0f0;
     }
 
-    .legend {
+    .control-panel {
       position: absolute;
       z-index: 500;
-      bottom: 28px;
-      right: 28px;
-      display: grid;
-      gap: 12px;
-      max-width: 220px;
-      padding: 16px;
+      top: 20px;
+      left: 20px;
+      width: 286px;
+      max-height: calc(100% - 40px);
+      overflow-y: auto;
+      padding: 18px 16px 20px;
       color: var(--ink);
       background: var(--surface);
       border: 1px solid var(--surface-border);
-      border-radius: 12px;
+      border-radius: 14px;
       box-shadow: var(--shadow);
-      font-size: 11px;
+      backdrop-filter: blur(8px);
+      font-size: 13px;
+    }
+
+    .panel-view[hidden] { display: none; }
+    .panel-section + .panel-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--surface-border);
+    }
+    .panel-heading {
+      margin: 0 0 8px;
+      padding: 0 8px;
+      font-size: 14px;
+      font-weight: 760;
+      letter-spacing: -.01em;
+    }
+
+    .panel-heading-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .panel-heading-row .panel-heading { margin: 0; }
+    .reset-button {
+      padding: 4px 10px;
+      color: var(--accent);
+      background: transparent;
+      border: 1px solid var(--surface-border);
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 650;
+      transition: background .15s ease, border-color .15s ease, opacity .15s ease;
+    }
+    .reset-button:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
+    .reset-button:disabled { opacity: .4; cursor: default; color: var(--muted); }
+
+    .filter-list { display: grid; gap: 1px; }
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 7px 8px;
+      color: var(--ink);
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      text-align: left;
+      transition: opacity .15s ease, background .15s ease;
+    }
+    .filter-item:hover { background: var(--accent-soft); }
+    .filter-item[aria-pressed="false"] { opacity: .38; }
+    .filter-item[aria-pressed="false"] .swatch-dot { background: transparent; }
+    .filter-row { display: flex; align-items: center; gap: 4px; }
+    .filter-row .filter-item { flex: 1; min-width: 0; width: auto; }
+    .only-button {
+      flex: 0 0 auto;
+      padding: 5px 6px;
+      color: var(--accent);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 650;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .15s ease;
+      white-space: nowrap;
+    }
+    .filter-row:hover .only-button,
+    .filter-row:focus-within .only-button {
+      opacity: 1;
+      visibility: visible;
       pointer-events: auto;
     }
-
-    .legend-title {
-      margin: 0;
-      font-size: 12px;
-      font-weight: 760;
+    .only-button:hover { background: var(--accent-soft); border-color: var(--surface-border); }
+    .plant-status-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+    .plant-status-button {
+      min-height: 34px;
+      padding: 6px 8px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 650;
     }
-
-    .legend-items {
+    .plant-status-button-wide { grid-column: 1 / -1; justify-self: center; width: 70%; }
+    .plant-status-button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+    .region-group-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .region-group-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 5px;
+      min-height: 36px;
+      padding: 6px 8px;
+      color: var(--ink);
+      background: transparent;
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 650;
+      line-height: 1.25;
+      text-align: left;
+    }
+    .region-group-toggle:hover,
+    .region-group-toggle[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
+    .region-chevron {
+      width: 7px;
+      height: 7px;
+      flex: 0 0 auto;
+      margin: -4px 2px 0 0;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: rotate(45deg);
+      transition: transform .15s ease;
+    }
+    .region-group-toggle[aria-expanded="true"] .region-chevron { margin-top: 4px; transform: rotate(225deg); }
+    .region-options {
       display: grid;
-      gap: 8px;
+      gap: 2px;
+      padding: 7px;
+      margin-top: 6px;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
     }
-
-    .legend-row {
+    .region-options[hidden] { display: none; }
+    .region-option {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 2px 0;
-    }
-
-    .legend-dot {
-      width: 9px;
-      height: 9px;
-      flex: 0 0 auto;
-      background: var(--legend-color);
-      border: 2px solid var(--surface-strong);
-      border-radius: 50%;
-      box-shadow: 0 0 0 1px var(--legend-color);
-    }
-
-    .legend-line {
-      width: 17px;
-      height: 3px;
-      flex: 0 0 auto;
-      background: var(--legend-color);
+      padding: 5px 4px;
       border-radius: 5px;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 12px;
     }
+    .region-option:hover { background: var(--accent-soft); }
+    .region-option input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
+    .swatch-dot {
+      width: 13px;
+      height: 13px;
+      flex: 0 0 auto;
+      background: var(--c);
+      border: 2px solid var(--c);
+      border-radius: 50%;
+    }
+    .swatch-line {
+      width: 24px;
+      height: 4px;
+      flex: 0 0 auto;
+      background: var(--c);
+      border-radius: 3px;
+    }
+
+    .range-values {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 8px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .range-values strong { color: var(--ink); font-weight: 680; }
+    .dual-range { position: relative; height: 24px; margin: 0 8px; }
+    .dual-range-track, .dual-range-fill {
+      position: absolute;
+      top: 10px;
+      height: 4px;
+      border-radius: 4px;
+    }
+    .dual-range-track { left: 0; right: 0; background: var(--track); }
+    .dual-range-fill { background: var(--accent); }
+    .dual-range input[type="range"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 24px;
+      margin: 0;
+      background: none;
+      pointer-events: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .dual-range input[type="range"]::-webkit-slider-runnable-track { background: transparent; }
+    .dual-range input[type="range"]::-moz-range-track { background: transparent; }
+    .dual-range input[type="range"]::-webkit-slider-thumb {
+      width: 18px;
+      height: 18px;
+      background: var(--surface-strong);
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
+      cursor: grab;
+      pointer-events: auto;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .dual-range input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: var(--surface-strong);
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .22);
+      cursor: grab;
+      pointer-events: auto;
+    }
+    .range-scale {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 8px 0;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 6px 8px;
+      color: var(--ink);
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 760;
+    }
+    .switch-row:hover { background: var(--accent-soft); }
+    .switch {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      flex: 0 0 auto;
+      background: var(--track);
+      border-radius: 11px;
+      transition: background .2s ease;
+    }
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+      transition: transform .2s ease;
+    }
+    .switch-row[aria-checked="true"] .switch { background: var(--accent); }
+    .switch-row[aria-checked="true"] .switch::after { transform: translateX(16px); }
 
     .map-error {
       position: absolute;
       z-index: 600;
       top: 24px;
-      left: 28px;
+      left: 50%;
+      transform: translateX(-50%);
       display: none;
       max-width: min(390px, calc(100vw - 56px));
       padding: 11px 14px;
@@ -247,6 +563,8 @@
       color: var(--ink);
       background: var(--surface-strong);
       padding: 12px 14px;
+      max-height: 70vh;
+      overflow-y: auto;
       border-radius: 8px;
     }
 
@@ -262,28 +580,16 @@
       font-size: 10px;
     }
     .popup-label { color: var(--muted); }
-    .popup-value { max-width: 140px; color: var(--ink); font-weight: 620; text-align: right; }
+    .popup-value { max-width: 140px; color: var(--ink); font-weight: 620; overflow-wrap: anywhere; text-align: right; }
 
-    .map-footnote {
-      position: absolute;
-      z-index: 500;
-      bottom: 28px;
-      left: 28px;
-      padding: 8px 11px;
-      color: var(--muted);
-      background: var(--surface);
-      border: 1px solid var(--surface-border);
-      border-radius: 10px;
-      box-shadow: 0 5px 17px rgba(34, 52, 65, .08);
-      font-size: 9px;
-      pointer-events: none;
-    }
+    .mapboxgl-ctrl-logo { display: none !important; }
+    .mapboxgl-ctrl-attrib.mapboxgl-compact { background: var(--surface-strong); }
 
     @media (max-width: 760px) {
       .topbar {
         grid-template-columns: auto 1fr auto;
         gap: 10px;
-        min-height: 66px;
+        min-height: 54px;
         padding: 0 12px;
       }
       .brand { gap: 8px; }
@@ -294,10 +600,10 @@
       .mode-button { padding: 0 10px; font-size: 10px; }
       .mode-button svg { width: 14px; height: 14px; }
       .theme-button { width: 38px; min-height: 38px; padding: 0; }
-      main { inset-block-start: 66px; }
-      .map-error { top: 14px; left: 12px; max-width: calc(100vw - 24px); }
-      .legend { right: 12px; bottom: 22px; width: 180px; padding: 12px; }
-      .map-footnote { bottom: 22px; left: 12px; max-width: calc(100vw - 220px); font-size: 8px; }
+      main { inset-block-start: 54px; }
+      .map-error { top: 14px; max-width: calc(100vw - 24px); }
+      .control-panel { top: 12px; left: 12px; width: 220px; padding: 12px 10px 14px; font-size: 12px; }
+      .filter-item { padding: 5px 6px; font-size: 12px; }
     }
 
     @media (max-width: 420px) {
@@ -305,13 +611,12 @@
       .brand { display: none; }
       .mode-switch { justify-self: start; gap: 4px; }
       .mode-button { padding: 0 8px; }
-      .legend { width: 160px; }
-      .map-footnote { max-width: calc(100vw - 190px); }
     }
   </style>
 </head>
 <body>
   <header class="topbar">
+    <div class="brand-group">
     <a class="brand" href="#" aria-label="DART Grid Atlas home">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none">
@@ -323,6 +628,12 @@
         <span class="brand-subtitle">U.S. POWER SYSTEMS</span>
       </span>
     </a>
+    <button class="about-button" id="about-button" type="button" aria-label="About this map" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/>
+      </svg>
+    </button>
+    </div>
 
     <nav class="mode-switch" aria-label="Map layers">
       <button class="mode-button" id="plants-button" type="button" aria-pressed="true">
@@ -352,12 +663,109 @@
   <main>
     <div id="map" role="application" aria-label="Interactive map of U.S. power infrastructure"></div>
     <div class="map-error" id="map-error" role="alert"></div>
-    <aside class="legend" aria-label="Map legend">
-      <h2 class="legend-title" id="legend-title">Power plants</h2>
-      <div class="legend-items" id="legend-items"></div>
+    <aside class="control-panel" aria-label="Map legend and filters">
+      <div class="panel-view" id="plants-panel">
+        <section class="panel-section">
+          <div class="panel-heading-row">
+            <h2 class="panel-heading">Plant Technology</h2>
+            <button class="reset-button" id="plants-reset" type="button" disabled>Reset</button>
+          </div>
+          <div class="filter-list" id="tech-filters"></div>
+          <div class="plant-status-buttons" id="plant-status-buttons" role="group" aria-label="Plant status">
+            <button class="plant-status-button" type="button" data-plant-status="planned" aria-pressed="false">Planned</button>
+            <button class="plant-status-button" type="button" data-plant-status="retired" aria-pressed="false">Retired</button>
+            <button class="plant-status-button plant-status-button-wide" type="button" data-plant-status="canceled" aria-pressed="false">Canceled/Postponed</button>
+          </div>
+        </section>
+        <section class="panel-section">
+          <h2 class="panel-heading">Filter by Capacity</h2>
+          <div class="range-values"><span><strong id="cap-min-label">0</strong> MW</span><span><strong id="cap-max-label">1000+</strong> MW</span></div>
+          <div class="dual-range">
+            <div class="dual-range-track"></div>
+            <div class="dual-range-fill" id="cap-fill"></div>
+            <input type="range" id="cap-min" min="0" max="1000" step="10" value="0" aria-label="Minimum capacity (MW)">
+            <input type="range" id="cap-max" min="0" max="1000" step="10" value="1000" aria-label="Maximum capacity (MW)">
+          </div>
+          <div class="range-scale"><span>0</span><span>250</span><span>500</span><span>750</span><span>1000+</span></div>
+        </section>
+        <section class="panel-section">
+          <h2 class="panel-heading">Market Regions</h2>
+          <div class="region-selector">
+            <div class="region-group-buttons">
+              <button class="region-group-toggle" type="button" data-region-group="markets" aria-expanded="false" aria-controls="plants-market-options">All Markets<span class="region-chevron" aria-hidden="true"></span></button>
+              <button class="region-group-toggle" type="button" data-region-group="other" aria-expanded="false" aria-controls="plants-other-options">Other/Non-Markets<span class="region-chevron" aria-hidden="true"></span></button>
+            </div>
+            <div class="region-options" id="plants-market-options" data-region-options="markets" hidden></div>
+            <div class="region-options" id="plants-other-options" data-region-options="other" hidden></div>
+          </div>
+        </section>
+      </div>
+      <div class="panel-view" id="network-panel" hidden>
+        <section class="panel-section">
+          <div class="panel-heading-row">
+            <h2 class="panel-heading">Voltage</h2>
+            <button class="reset-button" id="network-reset" type="button" disabled>Reset</button>
+          </div>
+          <div class="filter-list" id="voltage-filters"></div>
+        </section>
+        <section class="panel-section">
+          <button class="switch-row" id="subs-toggle" type="button" role="switch" aria-checked="true">
+            <span>Show Substations</span><span class="switch" aria-hidden="true"></span>
+          </button>
+        </section>
+      </div>
     </aside>
-    <div class="map-footnote">U.S. infrastructure data · Regional boundaries shown for context</div>
   </main>
+
+  <div class="about-overlay" id="about-overlay" hidden>
+    <div class="about-dialog" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <button class="about-close" id="about-close" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+      <h2 id="about-title">About DART Grid Atlas</h2>
+      <p class="about-lead">An interactive map of U.S. power generation and transmission infrastructure.</p>
+
+      <h3>Features</h3>
+      <ul>
+        <li><strong>Power Plants Map</strong> &mdash; Operating, Planned, Retired, and Canceled/Postponed entries (including Puerto Rico), filterable by technology and capacity.</li>
+        <li><strong>Infrastructure Map</strong> &mdash; 94,000+ transmission lines and substations, filterable by voltage.</li>
+        <li><strong>ISO regions</strong> &mdash; regional boundaries shown for context.</li>
+        <li>Click any plant, line or substation for details. Light and dark themes.</li>
+      </ul>
+
+      <h3>Data sources</h3>
+      <h4 class="about-source-heading">Infrastructure Data</h4>
+      <ul class="about-sources">
+        <li>
+          <a href="https://resilience.climate.gov/datasets/d4090758322c4d32a4cd002ffaa0aa12_0/explore" target="_blank" rel="noopener">U.S. Electric Power Transmission Lines (Archive)</a>
+          <span>Climate Mapping for Resilience and Adaptation (CMRA)</span>
+        </li>
+        <li>
+          <a href="https://mapyourgrid.org/" target="_blank" rel="noopener">MapYourGrid</a>
+          <span>Open, community-mapped grid data on OpenStreetMap</span>
+        </li>
+        <li>
+          <a href="https://543rd-gpc-hub-543rd.hub.arcgis.com/datasets/electric-substations/explore?location=39.149545%2C-9.857174%2C2" target="_blank" rel="noopener">Electric Substations | 543rd Data Site</a>
+          <span>Electric substation dataset</span>
+        </li>
+      </ul>
+      <h4 class="about-source-heading">Power Plants</h4>
+      <ul class="about-sources">
+        <li>
+          <a href="https://resourcewatch.org/" target="_blank" rel="noopener">Monitoring the Planet’s Pulse — Resource Watch</a>
+          <span>Resource Watch</span>
+        </li>
+        <li>
+          <a href="https://datasets.wri.org/" target="_blank" rel="noopener">Home Page - WRI Data Explorer</a>
+          <span>World Resources Institute datasets</span>
+        </li>
+        <li>
+          <a href="https://hub.arcgis.com/datasets/b063316fac7345dba4bae96eaa813b2f/explore?location=44.619558%2C-118.495999%2C4" target="_blank" rel="noopener">Power Plants in the U.S. | ArcGIS Hub</a>
+          <span>U.S. power plant dataset</span>
+        </li>
+      </ul>
+    </div>
+  </div>
 
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <script>
@@ -368,61 +776,320 @@
       light: "mapbox://styles/mapbox/light-v11",
       dark: "mapbox://styles/mapbox/dark-v11"
     };
-    const VOLTAGE_CLASSES = [
-      ["765 / 500 kV", "#df3f63"],
-      ["345 kV", "#8a5cd0"],
-      ["230 kV", "#2b86c5"],
-      ["115 kV and below", "#3f9d74"]
-    ];
-    const FUEL_CLASSES = [
-      ["Wind", "#43b985", ["WND"]],
-      ["Solar", "#e7ae4c", ["SUN"]],
-      ["Hydro", "#45b7c8", ["WAT"]],
-      ["Nuclear", "#9d82db", ["NUC"]],
-      ["Natural gas", "#5289d7", ["NG"]]
-    ];
-    const OTHER_FUEL_COLOR = "#eb785c";
-    const TX_LAYERS = ["tx-lines", "tx-lines-hit"];
-    const PLANT_LAYERS = ["power-plants"];
 
-    const ui = {
-      plantsButton: document.getElementById("plants-button"),
-      networkButton: document.getElementById("network-button"),
-      themeButton: document.getElementById("theme-button"),
-      error: document.getElementById("map-error"),
-      legendTitle: document.getElementById("legend-title"),
-      legendItems: document.getElementById("legend-items")
+    const PLANT_TECH = [
+      ["gas", "Natural Gas", "#f97316"],
+      ["coal", "Coal", "#8b5e3c"],
+      ["hydro", "Hydro", "#2563eb"],
+      ["battery", "Battery Storage", "#db2777"],
+      ["pumped", "Pumped Storage", "#0891b2"],
+      ["nuclear", "Nuclear", "#9333ea"],
+      ["solar", "Solar", "#eab308"],
+      ["wind", "Wind", "#16a34a"],
+      ["geothermal", "Geothermal", "#b91c1c"],
+      ["oil", "Oil", "#64748b"],
+      ["other", "Other", "#a3a3a3"]
+    ];
+    const FUEL_TECH = {
+      NG: "gas", OG: "gas", BFG: "gas", SGC: "gas", PG: "gas",
+      BIT: "coal", SUB: "coal", LIG: "coal", RC: "coal", WC: "coal", ANT: "coal", SC: "coal",
+      WAT: "hydro", MWH: "battery", NUC: "nuclear", SUN: "solar", WND: "wind", GEO: "geothermal",
+      DFO: "oil", RFO: "oil", KER: "oil", JF: "oil", WO: "oil", PC: "oil"
     };
 
-    let activeMode = "plants";
-    let activeTheme = localStorage.getItem("dart-map-theme") === "dark" ? "dark" : "light";
-    document.documentElement.dataset.theme = activeTheme;
+    const VOLTAGE = [
+      ["735", "735+ kV", "#c026d3", 7],
+      ["500", "500 kV", "#dc2626", 6],
+      ["345", "345 kV", "#ea580c", 5],
+      ["230", "230 kV", "#2563eb", 4],
+      ["115", "115-161 kV", "#16a34a", 3],
+      ["100", "≤ 100 kV", "#64748b", 2],
+      ["dc", "DC", "#0d9488", 1],
+      ["unknown", "Other", "#94a3b8", 0]
+    ];
+    const REGION_GROUPS = {
+      markets: {
+        regions: [
+          ["ERCOT", "ERCOT"], ["PJM", "PJM"], ["CAISO", "CAISO"], ["SPP", "SPP"],
+          ["MISO", "MISO"], ["NYISO", "NYISO"], ["ISO New England", "ISONE"]
+        ]
+      },
+      other: {
+        regions: [
+          ["FRCC", "FRCC"], ["SERTP", "SERTP"],
+          ["NorthernGrid", "NorthernGrid"], ["WestConnect", "WestConnect"]
+        ]
+      }
+    };
+    const ALL_REGIONS = Object.values(REGION_GROUPS).flatMap(group => group.regions.map(([region]) => region));
+    const REGION_PROPERTIES = Object.fromEntries(ALL_REGIONS.map(region => [
+      region,
+      `region_${region.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`
+    ]));
+    const LINE_CLASS = {
+      "735 AND ABOVE": "735", "500": "500", "345": "345", "220-287": "230",
+      "100-161": "115", "UNDER 100": "100", "DC": "dc"
+    };
+    const CAP_MAX = 1000;
+
+    // Bottom-to-top draw order; new layers are inserted below the next existing one.
+    const LAYER_ORDER = ["iso-regions", "tx-lines", "tx-lines-hit", "substations", "power-plants"];
+    const MODE_LAYERS = {
+      plants: ["iso-regions", "power-plants"],
+      network: ["tx-lines", "tx-lines-hit", "substations"]
+    };
+
+    const $ = id => document.getElementById(id);
+    const ui = {
+      plantsButton: $("plants-button"),
+      networkButton: $("network-button"),
+      themeButton: $("theme-button"),
+      error: $("map-error"),
+      plantsPanel: $("plants-panel"),
+      networkPanel: $("network-panel"),
+      techFilters: $("tech-filters"),
+      voltageFilters: $("voltage-filters"),
+      capMin: $("cap-min"),
+      capMax: $("cap-max"),
+      capMinLabel: $("cap-min-label"),
+      capMaxLabel: $("cap-max-label"),
+      capFill: $("cap-fill"),
+      subsToggle: $("subs-toggle"),
+      plantsReset: $("plants-reset"),
+      plantStatusButtons: $("plant-status-buttons"),
+      networkReset: $("network-reset")
+    };
+
+    const state = {
+      mode: "plants",
+      theme: localStorage.getItem("dart-map-theme") === "dark" ? "dark" : "light",
+      techs: new Set(PLANT_TECH.map(([key]) => key)),
+      plantStatus: "operating",
+      volts: new Set(VOLTAGE.map(([key]) => key)),
+      regions: new Set(ALL_REGIONS),
+      openRegionGroup: null,
+      capMin: 0,
+      capMax: CAP_MAX,
+      showSubs: true
+    };
+    document.documentElement.dataset.theme = state.theme;
 
     const map = new mapboxgl.Map({
       container: "map",
-      style: STYLES[activeTheme],
+      style: STYLES[state.theme],
       center: [-98, 39],
       zoom: 3.8,
       minZoom: 2.5,
       maxZoom: 16,
       projection: "mercator",
-      attributionControl: true
+      attributionControl: false
+    });
+    // Credits collapse behind an (i) button; click it to show or hide them.
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
+    map.on("load", () => {
+      map.getContainer().querySelector(".mapboxgl-ctrl-attrib")?.classList.remove("mapboxgl-compact-show");
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
+
+    function voltageClass(kv) {
+      const v = Number(kv);
+      if (!(v > 0)) return "unknown";
+      if (v >= 735) return "735";
+      if (v >= 500) return "500";
+      if (v >= 345) return "345";
+      if (v >= 200) return "230";
+      if (v > 100) return "115";
+      return "100";
+    }
+    const VOLT_RANK = Object.fromEntries(VOLTAGE.map(([key, , , rank]) => [key, rank]));
+
+    function plantTechnologies(p) {
+      const technology = p["Technology"] ?? p.type;
+      const pumpedStorage = String(technology || "").toUpperCase().includes("PUMPED STORAGE");
+      const sources = Array.isArray(p.energy_sources) && p.energy_sources.length
+        ? p.energy_sources
+        : [p["Energy Source Code"] ?? p.primary_fuel];
+      return [...new Set(sources.filter(Boolean).map(source =>
+        source === "WAT" && pumpedStorage ? "pumped" : FUEL_TECH[source] || "other"
+      ))];
+    }
 
     // Start all downloads immediately so switching tabs is instant.
     const fetchJson = url => fetch(url).then(r => {
       if (!r.ok) throw new Error(`${r.status} ${r.statusText} (${url})`);
       return r.json();
     });
+    const withProps = (promise, fn) => promise.then(fc => {
+      fc.features.forEach(f => fn(f.properties));
+      return fc;
+    });
+    function pointOnSegment(longitude, latitude, start, end) {
+      const cross = (longitude - start[0]) * (end[1] - start[1]) -
+        (latitude - start[1]) * (end[0] - start[0]);
+      if (Math.abs(cross) > 1e-10) return false;
+      return longitude >= Math.min(start[0], end[0]) - 1e-10 &&
+        longitude <= Math.max(start[0], end[0]) + 1e-10 &&
+        latitude >= Math.min(start[1], end[1]) - 1e-10 &&
+        latitude <= Math.max(start[1], end[1]) + 1e-10;
+    }
+
+    function pointInRing(longitude, latitude, ring) {
+      let inside = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const start = ring[j];
+        const end = ring[i];
+        if (pointOnSegment(longitude, latitude, start, end)) return true;
+        if ((start[1] > latitude) !== (end[1] > latitude) &&
+            longitude < (end[0] - start[0]) * (latitude - start[1]) / (end[1] - start[1]) + start[0]) {
+          inside = !inside;
+        }
+      }
+      return inside;
+    }
+
+    function pointInPolygon(longitude, latitude, rings) {
+      if (!rings.length || !pointInRing(longitude, latitude, rings[0])) return false;
+      for (const hole of rings.slice(1)) {
+        if (pointInRing(longitude, latitude, hole)) {
+          if (hole.some((point, index) => pointOnSegment(
+            longitude, latitude, point, hole[(index + 1) % hole.length]
+          ))) return true;
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function polygonBounds(rings) {
+      let west = Infinity;
+      let south = Infinity;
+      let east = -Infinity;
+      let north = -Infinity;
+      for (const ring of rings) {
+        for (const [longitude, latitude] of ring) {
+          west = Math.min(west, longitude);
+          south = Math.min(south, latitude);
+          east = Math.max(east, longitude);
+          north = Math.max(north, latitude);
+        }
+      }
+      return { west, south, east, north };
+    }
+
+    function annotatePlantRegions(plants, regions) {
+      const polygons = [];
+      regions.features.forEach(feature => {
+        const geometry = feature.geometry;
+        if (geometry?.type !== "MultiPolygon") return;
+        geometry.coordinates.forEach(rings => polygons.push({
+          region: feature.properties.region,
+          rings,
+          bounds: polygonBounds(rings)
+        }));
+      });
+
+      plants.features.forEach(feature => {
+        const [longitude, latitude] = feature.geometry.coordinates;
+        const memberships = new Set();
+        for (const polygon of polygons) {
+          if (memberships.has(polygon.region)) continue;
+          const { west, south, east, north } = polygon.bounds;
+          if (longitude < west || longitude > east || latitude < south || latitude > north) continue;
+          if (pointInPolygon(longitude, latitude, polygon.rings)) memberships.add(polygon.region);
+        }
+        ALL_REGIONS.forEach(region => {
+          feature.properties[REGION_PROPERTIES[region]] = memberships.has(region);
+        });
+      });
+      return plants;
+    }
+
+    const regionData = fetchJson("/api/iso-regions");
+    const plantDataCache = new Map();
+    function loadPlantData(status) {
+      if (!plantDataCache.has(status)) {
+        const request = withProps(
+          fetchJson(`/api/power-plants?status=${encodeURIComponent(status)}`),
+          p => {
+            p.tech = plantTechnologies(p)[0] || "other";
+            p.cap = Math.max(0, Number(
+              p["Net Summer Capacity (MW)"] ?? p.net_summer_capacity ?? p.summer_capacity
+            ) || 0);
+          }
+        ).then(async plants => annotatePlantRegions(plants, await regionData))
+          .catch(error => {
+            plantDataCache.delete(status);
+            throw error;
+          });
+        plantDataCache.set(status, request);
+      }
+      return plantDataCache.get(status);
+    }
+
+    async function loadCurrentPlantData() {
+      while (true) {
+        const status = state.plantStatus;
+        const plants = await loadPlantData(status);
+        if (state.plantStatus === status) return plants;
+      }
+    }
+
     const data = {
-      regions: fetchJson("/api/iso-regions"),
-      lines: fetchJson("/api/transmission-lines-geojson"),
-      plants: fetchJson("/api/power-plants")
+      regions: regionData,
+      lines: withProps(fetchJson("/api/transmission-lines-geojson"), p => {
+        p.line_id = p.ID ?? p.line_id;
+        p.type = p.TYPE ?? p.type;
+        p.status = p.STATUS ?? p.status;
+        p.owner = p.OWNER ?? p.owner;
+        p.voltage = p.VOLTAGE ?? p.voltage;
+        p.voltage_class = p.VOLT_CLASS ?? p.voltage_class;
+        p.from_substation = p.SUB_1 ?? p.from_substation;
+        p.to_substation = p.SUB_2 ?? p.to_substation;
+        const type = String(p.type || "");
+        p.vclass = type.startsWith("DC") ? "dc" : LINE_CLASS[p.voltage_class] || voltageClass(p.voltage);
+        p.vrank = VOLT_RANK[p.vclass] || 0;
+      }),
+      substations: withProps(fetchJson("/api/substations"), p => {
+        p.vclass = voltageClass(p.max_voltage);
+        p.vrank = VOLT_RANK[p.vclass] || 0;
+      })
     };
 
     function escapeHtml(value) {
       return String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function titleCase(value) {
+      if (!value || value === "NOT AVAILABLE") return null;
+      return String(value).toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase()).replace(/\b(Ac|Dc|Llc)\b/g, w => w.toUpperCase());
+    }
+
+    function capacityValue(value, unit) {
+      return value === null || value === undefined || !Number.isFinite(Number(value))
+        ? null
+        : `${Number(value).toLocaleString()} ${unit}`;
+    }
+
+    function workbookFieldRows(properties) {
+      const fields = properties.workbook_fields;
+      if (fields && typeof fields === "object" && !Array.isArray(fields)) {
+        return Object.entries(fields).map(([name, values]) => [
+          name,
+          Array.isArray(values) ? values.join(", ") : values
+        ]);
+      }
+      if (Object.prototype.hasOwnProperty.call(properties, "Plant Name")) {
+        return Object.entries(properties)
+          .filter(([name]) => !["sheet_status", "tech", "cap"].includes(name))
+          .map(([name, value]) => [name, value]);
+      }
+      return [
+        ["Capacity", capacityValue(properties.summer_capacity, "MW")],
+        ["Primary Fuel", properties.primary_fuel],
+        ["Operator", properties.operator],
+        ["Location", [properties.city, properties.state].filter(Boolean).join(", ")],
+        ["Status", properties.status]
+      ];
     }
 
     function popupHtml(title, rows) {
@@ -438,165 +1105,387 @@
       console.error("DART map data error:", error);
     }
 
-    function setLegend(mode) {
-      if (mode === "plants") {
-        ui.legendTitle.textContent = "Generation mix";
-        ui.legendItems.innerHTML = [...FUEL_CLASSES.map(([l, c]) => [l, c]), ["Other fuels", OTHER_FUEL_COLOR]]
-          .map(([l, c]) => `<div class="legend-row"><span class="legend-dot" style="--legend-color:${c}"></span>${l}</div>`).join("");
-      } else {
-        ui.legendTitle.textContent = "Transmission Lines";
-        ui.legendItems.innerHTML = VOLTAGE_CLASSES
-          .map(([l, c]) => `<div class="legend-row"><span class="legend-line" style="--legend-color:${c}"></span>${l}</div>`).join("");
+    // ---- Filters ----
+    const colorMatch = (prop, entries, fallback) => {
+      const expr = ["match", ["get", prop]];
+      entries.forEach(([key, , color]) => expr.push(key, color));
+      expr.push(fallback);
+      return expr;
+    };
+    const techColor = colorMatch("tech", PLANT_TECH, "#a3a3a3");
+    const voltColor = colorMatch("vclass", VOLTAGE, "#94a3b8");
+    const regionFilter = () => ["in", ["get", "region"], ["literal", [...state.regions]]];
+
+    function plantFilter() {
+      const filter = ["all",
+        ["==", ["get", "sheet_status"], state.plantStatus],
+        state.techs.size
+          ? ["in", ["get", "tech"], ["literal", [...state.techs]]]
+          : false,
+        [">=", ["get", "cap"], state.capMin]
+      ];
+      if (state.capMax < CAP_MAX) filter.push(["<=", ["get", "cap"], state.capMax]);
+      const excludedRegions = ALL_REGIONS.filter(region => !state.regions.has(region));
+      if (excludedRegions.length) {
+        filter.push(["all", ...excludedRegions.map(region => [
+          "==", ["get", REGION_PROPERTIES[region]], false
+        ])]);
       }
+      return filter;
+    }
+    const voltFilter = () => ["in", ["get", "vclass"], ["literal", [...state.volts]]];
+
+    function applyFilters() {
+      if (map.getLayer("power-plants")) map.setFilter("power-plants", plantFilter());
+      ["tx-lines", "tx-lines-hit", "substations"].forEach(id => {
+        if (map.getLayer(id)) map.setFilter(id, voltFilter());
+      });
+      if (map.getLayer("iso-regions")) map.setFilter("iso-regions", regionFilter());
+      updateResetButtons();
     }
 
-    function setVisibility(layerIds, visible) {
-      layerIds.forEach(id => {
-        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+    // Reset is only enabled when a tab's filters differ from the defaults.
+    function updateResetButtons() {
+      const allRegionsVisible = state.regions.size === ALL_REGIONS.length;
+      ui.plantsReset.disabled = state.techs.size === PLANT_TECH.length && state.plantStatus === "operating" && state.capMin === 0 && state.capMax === CAP_MAX && allRegionsVisible;
+      ui.networkReset.disabled = state.volts.size === VOLTAGE.length && state.showSubs;
+    }
+
+    function syncPlantStatusButtons() {
+      ui.plantStatusButtons.querySelectorAll("[data-plant-status]").forEach(button => {
+        button.setAttribute(
+          "aria-pressed",
+          String(button.dataset.plantStatus === state.plantStatus)
+        );
       });
     }
 
-    function applyMode() {
-      setVisibility(TX_LAYERS, activeMode === "network");
-      setVisibility(PLANT_LAYERS, activeMode === "plants");
+    function setPlantStatus(status) {
+      state.plantStatus = status;
+      syncPlantStatusButtons();
+      applyFilters();
+      loadPlantData(status).then(plants => {
+        if (state.plantStatus !== status) return;
+        const source = map.getSource("power-plants");
+        if (source) source.setData(plants);
+        applyFilters();
+      }).catch(showError);
     }
 
-    function switchMode(mode) {
-      activeMode = mode;
-      ui.plantsButton.setAttribute("aria-pressed", String(mode === "plants"));
-      ui.networkButton.setAttribute("aria-pressed", String(mode === "network"));
-      setLegend(mode);
-      applyMode();
+    function syncRegionControls() {
+      document.querySelectorAll(".region-group-toggle").forEach(button => {
+        button.setAttribute("aria-expanded", String(button.dataset.regionGroup === state.openRegionGroup));
+      });
+      document.querySelectorAll(".region-options").forEach(container => {
+        container.hidden = container.dataset.regionOptions !== state.openRegionGroup;
+        container.querySelectorAll("input[data-region]").forEach(input => {
+          input.checked = state.regions.has(input.dataset.region);
+        });
+      });
     }
 
-    const voltageColor = [
-      "case",
-      [">=", ["to-number", ["get", "voltage"], 0], 500], VOLTAGE_CLASSES[0][1],
-      [">=", ["to-number", ["get", "voltage"], 0], 345], VOLTAGE_CLASSES[1][1],
-      [">=", ["to-number", ["get", "voltage"], 0], 230], VOLTAGE_CLASSES[2][1],
-      VOLTAGE_CLASSES[3][1]
-    ];
-    const fuelColor = ["match", ["get", "primary_fuel"]];
-    FUEL_CLASSES.forEach(([, color, codes]) => fuelColor.push(codes, color));
-    fuelColor.push(OTHER_FUEL_COLOR);
-
-    // Adds sources/layers to the current style. Called on every style load (theme switches reset the style).
-    async function addDataLayers() {
-      const dark = activeTheme === "dark";
-      try {
-        const regions = await data.regions;
-        if (!map.getSource("iso-regions")) {
-          map.addSource("iso-regions", { type: "geojson", data: regions });
-          map.addLayer({
-            id: "iso-regions",
-            type: "line",
-            source: "iso-regions",
-            paint: { "line-color": dark ? "#6b7f8d" : "#9aa8b3", "line-width": 0.8, "line-opacity": 0.6, "line-dasharray": [3, 2] }
-          });
-        }
-      } catch (error) { showError(error); }
-
-      try {
-        const lines = await data.lines;
-        if (!map.getSource("tx-lines")) {
-          map.addSource("tx-lines", { type: "geojson", data: lines, tolerance: 0.6, buffer: 32 });
-          map.addLayer({
-            id: "tx-lines",
-            type: "line",
-            source: "tx-lines",
-            layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["to-number", ["get", "voltage"], 0] },
-            paint: {
-              "line-color": voltageColor,
-              "line-opacity": dark ? 0.9 : 0.85,
-              "line-width": [
-                "interpolate", ["linear"], ["zoom"],
-                3, ["case", [">=", ["to-number", ["get", "voltage"], 0], 345], 1.0, 0.5],
-                6, ["case", [">=", ["to-number", ["get", "voltage"], 0], 345], 1.8, 0.9],
-                10, ["case", [">=", ["to-number", ["get", "voltage"], 0], 345], 3.0, 1.8]
-              ]
-            }
-          });
-          // Invisible, wider layer to make lines easy to click.
-          map.addLayer({
-            id: "tx-lines-hit",
-            type: "line",
-            source: "tx-lines",
-            paint: { "line-color": "#000", "line-opacity": 0, "line-width": 8 }
-          });
-        }
-      } catch (error) { showError(error); }
-
-      try {
-        const plants = await data.plants;
-        if (!map.getSource("power-plants")) {
-          map.addSource("power-plants", { type: "geojson", data: plants });
-          map.addLayer({
-            id: "power-plants",
-            type: "circle",
-            source: "power-plants",
-            paint: {
-              "circle-color": fuelColor,
-              "circle-radius": [
-                "interpolate", ["linear"], ["zoom"],
-                3, ["interpolate", ["linear"], ["sqrt", ["max", 0, ["to-number", ["get", "summer_capacity"], 0]]], 0, 1.2, 60, 9],
-                10, ["interpolate", ["linear"], ["sqrt", ["max", 0, ["to-number", ["get", "summer_capacity"], 0]]], 0, 3, 60, 22]
-              ],
-              "circle-opacity": 0.78,
-              "circle-stroke-color": dark ? "#0f1a22" : "#ffffff",
-              "circle-stroke-width": 0.6
-            }
-          });
-        }
-      } catch (error) { showError(error); }
-
-      applyMode();
+    function resetRegions() {
+      state.regions = new Set(ALL_REGIONS);
+      syncRegionControls();
+      applyFilters();
     }
 
+    function toggleRegionGroup(groupKey) {
+      if (!REGION_GROUPS[groupKey]) return;
+      state.openRegionGroup = state.openRegionGroup === groupKey ? null : groupKey;
+      syncRegionControls();
+    }
+
+    function renderRegionOptions() {
+      document.querySelectorAll(".region-options").forEach(container => {
+        const group = REGION_GROUPS[container.dataset.regionOptions];
+        container.innerHTML = group.regions.map(([region, label]) =>
+          `<label class="region-option"><input type="checkbox" data-region="${escapeHtml(region)}"><span>${escapeHtml(label)}</span></label>`
+        ).join("");
+        container.addEventListener("change", event => {
+          const input = event.target.closest("input[data-region]");
+          if (!input) return;
+          if (input.checked) state.regions.add(input.dataset.region);
+          else state.regions.delete(input.dataset.region);
+          syncRegionControls();
+          applyFilters();
+        });
+      });
+      syncRegionControls();
+    }
+
+    function resetSelection(container, selected, entries) {
+      entries.forEach(([key]) => selected.add(key));
+      container.querySelectorAll(".filter-item").forEach(button => button.setAttribute("aria-pressed", "true"));
+    }
+
+    function resetPlants() {
+      resetSelection(ui.techFilters, state.techs, PLANT_TECH);
+      setPlantStatus("operating");
+      resetRegions();
+      ui.capMin.value = 0;
+      ui.capMax.value = CAP_MAX;
+      updateCapacity();
+    }
+
+    function resetNetwork() {
+      resetSelection(ui.voltageFilters, state.volts, VOLTAGE);
+      setShowSubs(true);
+      applyFilters();
+    }
+
+    function setShowSubs(show) {
+      state.showSubs = show;
+      ui.subsToggle.setAttribute("aria-checked", String(show));
+      applyVisibility();
+      updateResetButtons();
+    }
+
+    function applyVisibility() {
+      const visible = new Set(MODE_LAYERS[state.mode]);
+      if (!state.showSubs) visible.delete("substations");
+      [...MODE_LAYERS.plants, ...MODE_LAYERS.network].forEach(id => {
+        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible.has(id) ? "visible" : "none");
+      });
+    }
+
+    function renderFilterList(container, entries, selected, swatchClass, includeOnly = false) {
+      container.innerHTML = entries.map(([key, label, color]) => {
+        const toggle = `<button class="filter-item" type="button" data-key="${key}" aria-pressed="${selected.has(key)}">` +
+          `<span class="${swatchClass}" style="--c:${color}"></span>${escapeHtml(label)}</button>`;
+        if (!includeOnly) return toggle;
+        return `<div class="filter-row">${toggle}<button class="only-button" type="button" data-only-key="${key}" aria-label="Show only ${escapeHtml(label)}">Only [+]</button></div>`;
+      }).join("");
+      container.addEventListener("click", event => {
+        const onlyButton = event.target.closest("[data-only-key]");
+        if (onlyButton) {
+          const key = onlyButton.dataset.onlyKey;
+          if (!entries.some(([entryKey]) => entryKey === key)) return;
+          selected.clear();
+          selected.add(key);
+          container.querySelectorAll(".filter-item").forEach(button => {
+            button.setAttribute("aria-pressed", String(button.dataset.key === key));
+          });
+          applyFilters();
+          return;
+        }
+        const button = event.target.closest(".filter-item");
+        if (!button) return;
+        const key = button.dataset.key;
+        if (selected.has(key)) selected.delete(key); else selected.add(key);
+        button.setAttribute("aria-pressed", String(selected.has(key)));
+        applyFilters();
+      });
+    }
+
+    function updateCapacity(changed) {
+      let min = Number(ui.capMin.value);
+      let max = Number(ui.capMax.value);
+      if (min > max) {
+        if (changed === ui.capMin) min = max; else max = min;
+        ui.capMin.value = min;
+        ui.capMax.value = max;
+      }
+      state.capMin = min;
+      state.capMax = max;
+      ui.capMinLabel.textContent = min;
+      ui.capMaxLabel.textContent = max >= CAP_MAX ? `${CAP_MAX}+` : max;
+      ui.capFill.style.left = `${(min / CAP_MAX) * 100}%`;
+      ui.capFill.style.right = `${100 - (max / CAP_MAX) * 100}%`;
+      // Keep the min thumb grabbable when both thumbs sit at the right end.
+      ui.capMin.style.zIndex = min >= CAP_MAX - 10 ? 3 : 1;
+      ui.capMax.style.zIndex = 2;
+      applyFilters();
+    }
+
+    // ---- Layers ----
+    function addLayerOrdered(layer) {
+      if (map.getLayer(layer.id)) return;
+      const later = LAYER_ORDER.slice(LAYER_ORDER.indexOf(layer.id) + 1).find(id => map.getLayer(id));
+      map.addLayer(layer, later);
+    }
+
+    function addSource(id, source) {
+      if (!map.getSource(id)) map.addSource(id, source);
+    }
+
+    function lineWidth(base) {
+      return ["interpolate", ["linear"], ["zoom"],
+        3, ["*", base, ["match", ["get", "vclass"], ["735", "500"], 1.3, "345", 1.0, "dc", 1.0, 0.55]],
+        6, ["*", base, ["match", ["get", "vclass"], ["735", "500"], 2.2, "345", 1.8, "dc", 1.8, 1.0]],
+        10, ["*", base, ["match", ["get", "vclass"], ["735", "500"], 3.5, "345", 3.0, "dc", 3.0, 2.0]]
+      ];
+    }
+
+    const LAYER_BUILDERS = {
+      async regions(dark) {
+        addSource("iso-regions", { type: "geojson", data: await data.regions });
+        addLayerOrdered({
+          id: "iso-regions", type: "line", source: "iso-regions",
+          filter: regionFilter(),
+          paint: { "line-color": dark ? "#6b7f8d" : "#9aa8b3", "line-width": 0.8, "line-opacity": 0.6, "line-dasharray": [3, 2] }
+        });
+      },
+      async lines(dark) {
+        addSource("tx-lines", { type: "geojson", data: await data.lines, tolerance: 0.6, buffer: 32 });
+        addLayerOrdered({
+          id: "tx-lines", type: "line", source: "tx-lines", filter: voltFilter(),
+          layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["get", "vrank"] },
+          paint: { "line-color": voltColor, "line-opacity": dark ? 0.9 : 0.85, "line-width": lineWidth(1) }
+        });
+        // Invisible, wider layer to make lines easy to click.
+        addLayerOrdered({
+          id: "tx-lines-hit", type: "line", source: "tx-lines", filter: voltFilter(),
+          paint: { "line-color": "#000", "line-opacity": 0, "line-width": 8 }
+        });
+      },
+      async substations(dark) {
+        addSource("substations", { type: "geojson", data: await data.substations, buffer: 16 });
+        addLayerOrdered({
+          id: "substations", type: "circle", source: "substations", filter: voltFilter(),
+          layout: { "circle-sort-key": ["get", "vrank"] },
+          paint: {
+            "circle-color": voltColor,
+            "circle-radius": ["interpolate", ["linear"], ["zoom"],
+              3, ["*", 0.25, ["+", 2, ["get", "vrank"]]],
+              6, ["*", 0.5, ["+", 2, ["get", "vrank"]]],
+              9, ["*", 0.85, ["+", 2, ["get", "vrank"]]],
+              13, ["*", 1.3, ["+", 2, ["get", "vrank"]]]
+            ],
+            "circle-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.8, 7, 1],
+            "circle-stroke-color": dark ? "#0f1a22" : "#ffffff",
+            "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 4, 0, 7, 0.8, 12, 1.4]
+          }
+        });
+      },
+      async plants(dark) {
+        addSource("power-plants", { type: "geojson", data: await loadCurrentPlantData() });
+        addLayerOrdered({
+          id: "power-plants", type: "circle", source: "power-plants", filter: plantFilter(),
+          layout: { "circle-sort-key": ["-", 0, ["get", "cap"]] },
+          paint: {
+            "circle-color": techColor,
+            "circle-radius": ["interpolate", ["linear"], ["zoom"],
+              3, ["interpolate", ["linear"], ["sqrt", ["get", "cap"]], 0, 2.5, 60, 9],
+              10, ["interpolate", ["linear"], ["sqrt", ["get", "cap"]], 0, 4.5, 60, 22]
+            ],
+            "circle-opacity": 0.88,
+            "circle-stroke-color": dark ? "#0f1a22" : "#ffffff",
+            "circle-stroke-width": 0.6
+          }
+        });
+      }
+    };
+
+    // Called on every style load (theme switches reset the style). Each dataset is added
+    // as soon as it arrives, so the faster datasets do not wait on the larger ones.
+    function addDataLayers() {
+      const dark = state.theme === "dark";
+      Object.values(LAYER_BUILDERS).forEach(build => build(dark)
+        .then(() => { applyVisibility(); })
+        .catch(showError));
+    }
     map.on("style.load", addDataLayers);
+
+    // ---- Popups ----
+    const VOLT_LABEL = Object.fromEntries(VOLTAGE.map(([key, label]) => [key, label]));
+    const openPopup = (lngLat, html) => new mapboxgl.Popup({ maxWidth: "290px" }).setLngLat(lngLat).setHTML(html).addTo(map);
 
     map.on("click", "tx-lines-hit", e => {
       const p = e.features[0].properties;
-      new mapboxgl.Popup({ maxWidth: "280px" })
-        .setLngLat(e.lngLat)
-        .setHTML(popupHtml(p.line_id ? `Transmission line ${p.line_id}` : "Transmission line", [
-          ["Voltage", p.voltage && Number(p.voltage) > 0 ? `${p.voltage} kV` : null],
-          ["Owner", p.owner],
-          ["Status", p.status],
-          ["From", p.from_substation],
-          ["To", p.to_substation]
-        ]))
-        .addTo(map);
+      openPopup(e.lngLat, popupHtml(p.line_id ? `Transmission line ${p.line_id}` : "Transmission line", [
+        ["Voltage", Number(p.voltage) > 0 ? `${p.voltage} kV` : VOLT_LABEL[p.vclass]],
+        ["Owner", titleCase(p.owner)],
+        ["Type", titleCase(p.type)],
+        ["Status", titleCase(p.status)],
+        ["From", p.from_substation],
+        ["To", p.to_substation]
+      ]));
+    });
+
+    map.on("click", "substations", e => {
+      const f = e.features[0];
+      const p = f.properties;
+      const name = String(p.name || "").startsWith("UNKNOWN") ? `Substation ${p.station_id}` : titleCase(p.name);
+      const max = Number(p.max_voltage);
+      const min = Number(p.min_voltage);
+      openPopup(f.geometry.coordinates, popupHtml(name, [
+        ["Voltage", max > 0 ? (min > 0 && min !== max ? `${max} / ${min} kV` : `${max} kV`) : null],
+        ["Type", titleCase(p.type)],
+        ["Status", titleCase(p.status)],
+        ["Location", [titleCase(p.city), p.state].filter(Boolean).join(", ")]
+      ]));
     });
 
     map.on("click", "power-plants", e => {
-      const p = e.features[0].properties;
-      new mapboxgl.Popup({ maxWidth: "280px" })
-        .setLngLat(e.features[0].geometry.coordinates)
-        .setHTML(popupHtml(p.name || "Power plant", [
-          ["Capacity", p.summer_capacity ? `${p.summer_capacity} MW` : null],
-          ["Primary fuel", p.primary_fuel],
-          ["Operator", p.operator],
-          ["Location", [p.city, p.state].filter(Boolean).join(", ")],
-          ["Status", p.status]
-        ]))
-        .addTo(map);
+      const f = e.features[0];
+      const p = f.properties;
+      openPopup(
+        f.geometry.coordinates,
+        popupHtml(titleCase(p["Plant Name"] || p.name) || "Power plant", workbookFieldRows(p))
+      );
     });
 
-    ["tx-lines-hit", "power-plants"].forEach(id => {
+    ["tx-lines-hit", "substations", "power-plants"].forEach(id => {
       map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
     });
 
+    // ---- UI wiring ----
+    function switchMode(mode) {
+      state.mode = mode;
+      ui.plantsButton.setAttribute("aria-pressed", String(mode === "plants"));
+      ui.networkButton.setAttribute("aria-pressed", String(mode === "network"));
+      ui.plantsPanel.hidden = mode !== "plants";
+      ui.networkPanel.hidden = mode !== "network";
+      applyVisibility();
+    }
+
+    renderFilterList(ui.techFilters, PLANT_TECH, state.techs, "swatch-dot", true);
+    renderFilterList(ui.voltageFilters, VOLTAGE, state.volts, "swatch-line", true);
+    ui.plantStatusButtons.addEventListener("click", event => {
+      const button = event.target.closest("[data-plant-status]");
+      if (!button) return;
+      const status = state.plantStatus === button.dataset.plantStatus
+        ? "operating"
+        : button.dataset.plantStatus;
+      setPlantStatus(status);
+    });
+    renderRegionOptions();
+    document.querySelectorAll(".region-group-toggle").forEach(button => {
+      button.addEventListener("click", () => toggleRegionGroup(button.dataset.regionGroup));
+    });
+    ui.capMin.addEventListener("input", () => updateCapacity(ui.capMin));
+    ui.capMax.addEventListener("input", () => updateCapacity(ui.capMax));
+    ui.subsToggle.addEventListener("click", () => setShowSubs(!state.showSubs));
+    ui.plantsReset.addEventListener("click", resetPlants);
+    ui.networkReset.addEventListener("click", resetNetwork);
+    const aboutOverlay = $("about-overlay");
+    const aboutButton = $("about-button");
+    function setAboutOpen(open) {
+      aboutOverlay.hidden = !open;
+      if (open) $("about-close").focus(); else aboutButton.focus();
+    }
+    aboutButton.addEventListener("click", () => setAboutOpen(true));
+    $("about-close").addEventListener("click", () => setAboutOpen(false));
+    aboutOverlay.addEventListener("click", event => { if (event.target === aboutOverlay) setAboutOpen(false); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !aboutOverlay.hidden) setAboutOpen(false); });
+
     ui.plantsButton.addEventListener("click", () => switchMode("plants"));
     ui.networkButton.addEventListener("click", () => switchMode("network"));
     ui.themeButton.addEventListener("click", () => {
-      activeTheme = activeTheme === "dark" ? "light" : "dark";
-      document.documentElement.dataset.theme = activeTheme;
-      localStorage.setItem("dart-map-theme", activeTheme);
-      ui.themeButton.setAttribute("aria-label", activeTheme === "dark" ? "Switch to light theme" : "Switch to dark theme");
-      map.setStyle(STYLES[activeTheme]);
+      state.theme = state.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = state.theme;
+      localStorage.setItem("dart-map-theme", state.theme);
+      updateThemeLabel();
+      map.setStyle(STYLES[state.theme]);
     });
+    function updateThemeLabel() {
+      ui.themeButton.setAttribute("aria-label", state.theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
+    }
 
+    updateThemeLabel();
+    updateCapacity();
     switchMode("plants");
   </script>
 </body>
