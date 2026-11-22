@@ -412,12 +412,21 @@
     .region-option {
       display: flex;
       align-items: center;
+      flex: 1;
+      min-width: 0;
       gap: 8px;
       padding: 5px 4px;
       border-radius: 5px;
       color: var(--ink);
       cursor: pointer;
       font-size: 12px;
+    }
+    .region-option-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .region-option-row:hover .only-button,
+    .region-option-row:focus-within .only-button {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
     }
     .region-option:hover { background: var(--accent-soft); }
     .region-option input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
@@ -712,6 +721,9 @@
           <button class="switch-row" id="subs-toggle" type="button" role="switch" aria-checked="true">
             <span>Show Substations</span><span class="switch" aria-hidden="true"></span>
           </button>
+          <button class="switch-row" id="offshore-toggle" type="button" role="switch" aria-checked="true">
+            <span>Show Offshore Wind Cables</span><span class="switch" aria-hidden="true"></span>
+          </button>
         </section>
       </div>
     </aside>
@@ -734,34 +746,50 @@
       </ul>
 
       <h3>Data sources</h3>
-      <h4 class="about-source-heading">Infrastructure Data</h4>
+      <h4 class="about-source-heading">Infrastructure</h4>
+      <h5 class="about-source-heading">Electric Substations</h5>
       <ul class="about-sources">
-        <li>
-          <a href="https://resilience.climate.gov/datasets/d4090758322c4d32a4cd002ffaa0aa12_0/explore" target="_blank" rel="noopener">U.S. Electric Power Transmission Lines (Archive)</a>
-          <span>Climate Mapping for Resilience and Adaptation (CMRA)</span>
-        </li>
-        <li>
-          <a href="https://mapyourgrid.org/" target="_blank" rel="noopener">MapYourGrid</a>
-          <span>Open, community-mapped grid data on OpenStreetMap</span>
-        </li>
         <li>
           <a href="https://543rd-gpc-hub-543rd.hub.arcgis.com/datasets/electric-substations/explore?location=39.149545%2C-9.857174%2C2" target="_blank" rel="noopener">Electric Substations | 543rd Data Site</a>
           <span>Electric substation dataset</span>
         </li>
       </ul>
+      <h5 class="about-source-heading">Transmission Lines</h5>
+      <ul class="about-sources">
+        <li>
+          <a href="https://resilience.climate.gov/datasets/d4090758322c4d32a4cd002ffaa0aa12_0/about" target="_blank" rel="noopener">U.S. Electric Power Transmission Lines | CMRA</a>
+          <span>Climate Mapping for Resilience and Adaptation</span>
+        </li>
+        <li>
+          <a href="https://geohub.data.undp.org/data/4bd462e63c0b8ebea1295fdf61ca6b61" target="_blank" rel="noopener">Electricity Transmission Lines | UNDP GeoHub</a>
+          <span>Global transmission line data</span>
+        </li>
+        <li>
+          <a href="https://www.apollotechnical.com/power-grid-projects-map/#power-grid-projects-map" target="_blank" rel="noopener">Power Grid Projects Map | Apollo Technical</a>
+          <span>Map of power grid projects</span>
+        </li>
+        <li>
+          <a href="https://www.arcgis.com/home/item.html?id=730d3401e03544469dd791b51fe0cf54#overview" target="_blank" rel="noopener">Electric Power Transmission Lines | ArcGIS</a>
+          <span>Transmission line dataset</span>
+        </li>
+        <li>
+          <a href="https://boem-metaport-boem.hub.arcgis.com/datasets/offshore-wind-export-cables-proposed-or-installed/about" target="_blank" rel="noopener">Offshore Wind Export Cables (Proposed or Installed) | BOEM</a>
+          <span>Offshore wind export cable data</span>
+        </li>
+      </ul>
       <h4 class="about-source-heading">Power Plants</h4>
       <ul class="about-sources">
         <li>
-          <a href="https://resourcewatch.org/" target="_blank" rel="noopener">Monitoring the Planet’s Pulse — Resource Watch</a>
-          <span>Resource Watch</span>
-        </li>
-        <li>
-          <a href="https://datasets.wri.org/" target="_blank" rel="noopener">Home Page - WRI Data Explorer</a>
-          <span>World Resources Institute datasets</span>
+          <a href="https://www.eia.gov/electricity/data/eia860M/" target="_blank" rel="noopener">EIA-860M: Monthly Update to the Preliminary Monthly Electric Generator Inventory</a>
+          <span>U.S. Energy Information Administration</span>
         </li>
         <li>
           <a href="https://hub.arcgis.com/datasets/b063316fac7345dba4bae96eaa813b2f/explore?location=44.619558%2C-118.495999%2C4" target="_blank" rel="noopener">Power Plants in the U.S. | ArcGIS Hub</a>
           <span>U.S. power plant dataset</span>
+        </li>
+        <li>
+          <a href="https://arcgis.netl.doe.gov/portal/home/item.html?id=f4dc5f7fc1944f1eaac3e09f386d4f75&amp;view=list&amp;sortOrder=desc&amp;sortField=defaultFSOrder#data" target="_blank" rel="noopener">U.S. Power Plants | NETL ArcGIS Portal</a>
+          <span>National Energy Technology Laboratory power plant data</span>
         </li>
       </ul>
     </div>
@@ -833,11 +861,15 @@
     const CAP_MAX = 1000;
 
     // Bottom-to-top draw order; new layers are inserted below the next existing one.
-    const LAYER_ORDER = ["iso-regions", "tx-lines", "tx-lines-hit", "substations", "power-plants"];
+    const LAYER_ORDER = [
+      "iso-regions", "tx-lines", "tx-lines-hit", "tx-lines-dc", "tx-lines-dc-hit",
+      "hvdc-line", "offshore-cables", "offshore-cables-hit", "dc-substations", "substations", "power-plants"
+    ];
     const MODE_LAYERS = {
       plants: ["iso-regions", "power-plants"],
-      network: ["tx-lines", "tx-lines-hit", "substations"]
+      network: ["tx-lines", "tx-lines-hit", "tx-lines-dc", "tx-lines-dc-hit", "hvdc-line", "offshore-cables", "offshore-cables-hit", "dc-substations", "substations"]
     };
+    const NETWORK_LAYER_IDS = new Set(MODE_LAYERS.network);
 
     const $ = id => document.getElementById(id);
     const ui = {
@@ -855,6 +887,7 @@
       capMaxLabel: $("cap-max-label"),
       capFill: $("cap-fill"),
       subsToggle: $("subs-toggle"),
+      offshoreToggle: $("offshore-toggle"),
       plantsReset: $("plants-reset"),
       plantStatusButtons: $("plant-status-buttons"),
       networkReset: $("network-reset")
@@ -870,7 +903,8 @@
       openRegionGroup: null,
       capMin: 0,
       capMax: CAP_MAX,
-      showSubs: true
+      showSubs: true,
+      showOffshore: true
     };
     document.documentElement.dataset.theme = state.theme;
 
@@ -914,7 +948,6 @@
       ))];
     }
 
-    // Start all downloads immediately so switching tabs is instant.
     const fetchJson = url => fetch(url).then(r => {
       if (!r.ok) throw new Error(`${r.status} ${r.statusText} (${url})`);
       return r.json();
@@ -977,25 +1010,45 @@
     }
 
     function annotatePlantRegions(plants, regions) {
-      const polygons = [];
+      const regionGroups = new Map();
       regions.features.forEach(feature => {
         const geometry = feature.geometry;
         if (geometry?.type !== "MultiPolygon") return;
-        geometry.coordinates.forEach(rings => polygons.push({
-          region: feature.properties.region,
-          rings,
-          bounds: polygonBounds(rings)
-        }));
+        const region = feature.properties.region;
+        geometry.coordinates.forEach(rings => {
+          let group = regionGroups.get(region);
+          if (!group) {
+            group = { polygons: [], bounds: null };
+            regionGroups.set(region, group);
+          }
+          const bounds = polygonBounds(rings);
+          group.polygons.push({ rings, bounds });
+          group.bounds = group.bounds
+            ? {
+              west: Math.min(group.bounds.west, bounds.west),
+              south: Math.min(group.bounds.south, bounds.south),
+              east: Math.max(group.bounds.east, bounds.east),
+              north: Math.max(group.bounds.north, bounds.north)
+            }
+            : bounds;
+        });
       });
 
       plants.features.forEach(feature => {
         const [longitude, latitude] = feature.geometry.coordinates;
         const memberships = new Set();
-        for (const polygon of polygons) {
-          if (memberships.has(polygon.region)) continue;
-          const { west, south, east, north } = polygon.bounds;
+        for (const [region, group] of regionGroups) {
+          const { west, south, east, north } = group.bounds;
           if (longitude < west || longitude > east || latitude < south || latitude > north) continue;
-          if (pointInPolygon(longitude, latitude, polygon.rings)) memberships.add(polygon.region);
+          for (const polygon of group.polygons) {
+            const bounds = polygon.bounds;
+            if (longitude < bounds.west || longitude > bounds.east ||
+                latitude < bounds.south || latitude > bounds.north) continue;
+            if (pointInPolygon(longitude, latitude, polygon.rings)) {
+              memberships.add(region);
+              break;
+            }
+          }
         }
         ALL_REGIONS.forEach(region => {
           feature.properties[REGION_PROPERTIES[region]] = memberships.has(region);
@@ -1034,25 +1087,189 @@
       }
     }
 
+    let linesPromise;
+    function normalizeLineProperties(p) {
+      p.line_id = p.ID ?? p.line_id;
+      p.line_name = p.NAME ?? p.name ?? p.line_name;
+      p.type = p.TYPE ?? p.type ?? p.current_type;
+      p.status = p.STATUS ?? p.status;
+      p.owner = p.OWNER ?? p.owner;
+      p.operator = p.OPERATOR ?? p.operator ?? p.owner;
+      p.voltage = p.VOLTAGE ?? p.voltage ?? p.voltage_kv;
+      p.voltage_class = p.VOLT_CLASS ?? p.voltage_class;
+      p.from_substation = p.SUB_1 ?? p.from_substation;
+      p.to_substation = p.SUB_2 ?? p.to_substation;
+      const type = String(p.type || "");
+      p.vclass = type.startsWith("DC") ? "dc" : LINE_CLASS[p.voltage_class] || voltageClass(p.voltage);
+      p.vrank = VOLT_RANK[p.vclass] || 0;
+    }
+
+    function loadLines() {
+      if (!linesPromise) {
+        linesPromise = withProps(
+          fetchJson("/api/transmission-lines-geojson"),
+          normalizeLineProperties
+        )
+          .catch(error => {
+            linesPromise = null;
+            throw error;
+          });
+      }
+      return linesPromise;
+    }
+
+    let dcLinesPromise;
+    function loadDcLines() {
+      if (!dcLinesPromise) {
+        dcLinesPromise = withProps(
+          fetchJson("/api/transmission-lines-dc-geojson"),
+          normalizeLineProperties
+        ).catch(error => {
+          dcLinesPromise = null;
+          throw error;
+        });
+      }
+      return dcLinesPromise;
+    }
+
+    let substationsPromise;
+    function loadSubstations() {
+      if (!substationsPromise) {
+        substationsPromise = withProps(fetchJson("/api/substations"), p => {
+          p.vclass = voltageClass(p.max_voltage);
+          p.vrank = VOLT_RANK[p.vclass] || 0;
+        }).catch(error => {
+          substationsPromise = null;
+          throw error;
+        });
+      }
+      return substationsPromise;
+    }
+
+    function selectDcEndpointSubstations(substations, lines) {
+      const namedEndpoints = [];
+      const unnamedEndpoints = [];
+      lines.features.forEach(feature => {
+        const geometry = feature.geometry;
+        const chains = geometry.type === "MultiLineString"
+          ? geometry.coordinates
+          : geometry.type === "LineString" ? [geometry.coordinates] : [];
+        const endpoints = chains.flatMap(chain =>
+          chain.length ? [chain[0], chain[chain.length - 1]] : []
+        );
+        const properties = feature.properties;
+        [properties.from_substation, properties.to_substation].forEach((name, index) => {
+          if (name && !["NOT AVAILABLE", "N/A", "UNKNOWN"].includes(String(name).trim().toUpperCase())) {
+            namedEndpoints.push([String(name).trim().toUpperCase(), endpoints]);
+          } else if (endpoints[index]) {
+            unnamedEndpoints.push(endpoints[index]);
+          }
+        });
+      });
+
+      const distanceMeters = (first, second) => {
+        const latitude = (first[1] + second[1]) * Math.PI / 360;
+        return Math.hypot(
+          (first[0] - second[0]) * 111320 * Math.cos(latitude),
+          (first[1] - second[1]) * 111320
+        );
+      };
+      const stationsByName = new Map();
+      substations.features.forEach(feature => {
+        const name = String(feature.properties.name || "").trim().toUpperCase();
+        if (!name) return;
+        if (!stationsByName.has(name)) stationsByName.set(name, []);
+        stationsByName.get(name).push(feature);
+      });
+      const selectedStations = new Map();
+      const addStation = feature => {
+        const id = feature.properties.station_id ?? feature.id;
+        if (id !== null && id !== undefined) selectedStations.set(String(id), feature);
+      };
+
+      namedEndpoints.forEach(([name, endpoints]) => {
+        let nearest;
+        let nearestDistance = Infinity;
+        (stationsByName.get(name) || []).forEach(feature => {
+          const coordinates = feature.geometry.coordinates;
+          const distance = Math.min(...endpoints.map(endpoint =>
+            distanceMeters(coordinates, endpoint)
+          ));
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearest = feature;
+          }
+        });
+        if (nearest && nearestDistance <= 5000) addStation(nearest);
+      });
+
+      unnamedEndpoints.forEach(endpoint => {
+        const latitudeRange = 2000 / 111320;
+        const longitudeRange = latitudeRange / Math.max(0.01, Math.cos(endpoint[1] * Math.PI / 180));
+        let nearest;
+        let nearestDistance = 2000;
+        substations.features.forEach(feature => {
+          const coordinates = feature.geometry.coordinates;
+          if (Math.abs(coordinates[1] - endpoint[1]) > latitudeRange ||
+              Math.abs(coordinates[0] - endpoint[0]) > longitudeRange) return;
+          const distance = distanceMeters(coordinates, endpoint);
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearest = feature;
+          }
+        });
+        if (nearest) addStation(nearest);
+      });
+
+      return {
+        type: "FeatureCollection",
+        features: [...selectedStations.values()]
+      };
+    }
+
+    let dcSubstationsPromise;
+    function loadDcSubstations() {
+      if (!dcSubstationsPromise) {
+        dcSubstationsPromise = Promise.all([loadSubstations(), loadDcLines()])
+          .then(([substations, lines]) => selectDcEndpointSubstations(substations, lines))
+          .catch(error => {
+            dcSubstationsPromise = null;
+            throw error;
+          });
+      }
+      return dcSubstationsPromise;
+    }
+
+    let offshorePromise;
+    function loadOffshoreCables() {
+      if (!offshorePromise) {
+        offshorePromise = withProps(fetchJson("/api/offshore-cables-geojson"), p => {
+          p.vclass = p.current === "DC" ? "dc" : voltageClass(p.voltage);
+          p.vrank = VOLT_RANK[p.vclass] || 0;
+        }).catch(error => {
+          offshorePromise = null;
+          throw error;
+        });
+      }
+      return offshorePromise;
+    }
+
+    let sunziaRoutePromise;
+    function loadSunziaRoute() {
+      if (!sunziaRoutePromise) {
+        sunziaRoutePromise = withProps(
+          fetchJson("/api/hvdc-geojson"),
+          normalizeLineProperties
+        ).catch(error => {
+          sunziaRoutePromise = null;
+          throw error;
+        });
+      }
+      return sunziaRoutePromise;
+    }
+
     const data = {
-      regions: regionData,
-      lines: withProps(fetchJson("/api/transmission-lines-geojson"), p => {
-        p.line_id = p.ID ?? p.line_id;
-        p.type = p.TYPE ?? p.type;
-        p.status = p.STATUS ?? p.status;
-        p.owner = p.OWNER ?? p.owner;
-        p.voltage = p.VOLTAGE ?? p.voltage;
-        p.voltage_class = p.VOLT_CLASS ?? p.voltage_class;
-        p.from_substation = p.SUB_1 ?? p.from_substation;
-        p.to_substation = p.SUB_2 ?? p.to_substation;
-        const type = String(p.type || "");
-        p.vclass = type.startsWith("DC") ? "dc" : LINE_CLASS[p.voltage_class] || voltageClass(p.voltage);
-        p.vrank = VOLT_RANK[p.vclass] || 0;
-      }),
-      substations: withProps(fetchJson("/api/substations"), p => {
-        p.vclass = voltageClass(p.max_voltage);
-        p.vrank = VOLT_RANK[p.vclass] || 0;
-      })
+      regions: regionData
     };
 
     function escapeHtml(value) {
@@ -1070,26 +1287,35 @@
         : `${Number(value).toLocaleString()} ${unit}`;
     }
 
+    const PLANT_POPUP_FIELDS = [
+      ["Plant Name", "name"],
+      ["County", "county"],
+      ["Nameplate Capacity (MW)", "nameplate_capacity"],
+      ["Net Summer Capacity (MW)", "net_summer_capacity", "summer_capacity"],
+      ["Net Winter Capacity (MW)", "net_winter_capacity"],
+      ["Technology", "type"],
+      ["Energy Source Code", "primary_fuel"],
+      ["Prime Mover Code", "prime_mover"],
+      ["Operating Month", "operating_month"],
+      ["Operating Year", "operating_year"],
+      ["Status", "status"]
+    ];
+
     function workbookFieldRows(properties) {
-      const fields = properties.workbook_fields;
-      if (fields && typeof fields === "object" && !Array.isArray(fields)) {
-        return Object.entries(fields).map(([name, values]) => [
-          name,
-          Array.isArray(values) ? values.join(", ") : values
-        ]);
-      }
-      if (Object.prototype.hasOwnProperty.call(properties, "Plant Name")) {
-        return Object.entries(properties)
-          .filter(([name]) => !["sheet_status", "tech", "cap"].includes(name))
-          .map(([name, value]) => [name, value]);
-      }
-      return [
-        ["Capacity", capacityValue(properties.summer_capacity, "MW")],
-        ["Primary Fuel", properties.primary_fuel],
-        ["Operator", properties.operator],
-        ["Location", [properties.city, properties.state].filter(Boolean).join(", ")],
-        ["Status", properties.status]
-      ];
+      const workbookFields = properties.workbook_fields;
+      const fields = workbookFields && typeof workbookFields === "object" && !Array.isArray(workbookFields)
+        ? workbookFields
+        : properties;
+      return PLANT_POPUP_FIELDS.map(([name, ...fallbacks]) => {
+        let value = fields[name];
+        if (Array.isArray(value)) value = value.join(", ");
+        if (value === null || value === undefined || value === "") {
+          value = fallbacks.map(field => properties[field]).find(field =>
+            field !== null && field !== undefined && field !== ""
+          );
+        }
+        return [name, value];
+      });
     }
 
     function popupHtml(title, rows) {
@@ -1125,22 +1351,80 @@
         [">=", ["get", "cap"], state.capMin]
       ];
       if (state.capMax < CAP_MAX) filter.push(["<=", ["get", "cap"], state.capMax]);
-      const excludedRegions = ALL_REGIONS.filter(region => !state.regions.has(region));
-      if (excludedRegions.length) {
-        filter.push(["all", ...excludedRegions.map(region => [
-          "==", ["get", REGION_PROPERTIES[region]], false
+      if (state.regions.size) {
+        filter.push(["any", ...[...state.regions].map(region => [
+          "==", ["get", REGION_PROPERTIES[region]], true
         ])]);
+      } else {
+        filter.push(false);
       }
       return filter;
     }
+
+    function plantCapacityScaleMax(features) {
+      const capacities = features
+        .filter(feature => state.techs.has(feature.properties.tech))
+        .map(feature => Number(feature.properties.cap) || 0)
+        .filter(capacity => capacity > 0)
+        .sort((a, b) => a - b);
+      if (!capacities.length) return 1;
+      return capacities[Math.ceil(capacities.length * 0.95) - 1];
+    }
+
+    function plantRadiusExpression(scaleMax) {
+      const maxSqrtCapacity = Math.sqrt(Math.max(scaleMax, 1));
+      const scaledCapacity = ["min", ["sqrt", ["get", "cap"]], maxSqrtCapacity];
+      return ["interpolate", ["linear"], ["zoom"],
+        3, ["interpolate", ["linear"], scaledCapacity, 0, 1.2, maxSqrtCapacity, 5],
+        7, ["interpolate", ["linear"], scaledCapacity, 0, 2, maxSqrtCapacity, 8],
+        10, ["interpolate", ["linear"], scaledCapacity, 0, 3, maxSqrtCapacity, 12]
+      ];
+    }
+
+    let plantSizingRequest = 0;
+    async function updatePlantSizing() {
+      if (state.mode !== "plants" || !map.getLayer("power-plants")) return;
+      const request = ++plantSizingRequest;
+      const status = state.plantStatus;
+      try {
+        const plants = await loadPlantData(status);
+        if (request !== plantSizingRequest || state.plantStatus !== status ||
+            !map.getLayer("power-plants")) return;
+        map.setPaintProperty(
+          "power-plants",
+          "circle-radius",
+          plantRadiusExpression(plantCapacityScaleMax(plants.features))
+        );
+      } catch (error) {
+        showError(error);
+      }
+    }
+
     const voltFilter = () => ["in", ["get", "vclass"], ["literal", [...state.volts]]];
+    // Cables that may be built as DC also appear when the DC class is selected.
+    const offshoreFilter = () => ["any", voltFilter(), state.volts.has("dc") ? ["get", "dc_capable"] : false];
 
     function applyFilters() {
       if (map.getLayer("power-plants")) map.setFilter("power-plants", plantFilter());
-      ["tx-lines", "tx-lines-hit", "substations"].forEach(id => {
+      void updatePlantSizing();
+      const dcOnly = state.volts.size === 1 && state.volts.has("dc");
+      [
+        "hvdc-line",
+        ...(dcOnly
+          ? ["tx-lines-dc", "tx-lines-dc-hit"]
+          : ["tx-lines", "tx-lines-hit"])
+      ].forEach(id => {
         if (map.getLayer(id)) map.setFilter(id, voltFilter());
       });
+      if (map.getLayer("substations")) {
+        map.setFilter("substations", voltFilter());
+      }
+      ["offshore-cables", "offshore-cables-hit"].forEach(id => {
+        if (map.getLayer(id)) map.setFilter(id, offshoreFilter());
+      });
       if (map.getLayer("iso-regions")) map.setFilter("iso-regions", regionFilter());
+      if (state.mode === "network") ensureNetworkLayers();
+      else applyVisibility();
       updateResetButtons();
     }
 
@@ -1148,7 +1432,7 @@
     function updateResetButtons() {
       const allRegionsVisible = state.regions.size === ALL_REGIONS.length;
       ui.plantsReset.disabled = state.techs.size === PLANT_TECH.length && state.plantStatus === "operating" && state.capMin === 0 && state.capMax === CAP_MAX && allRegionsVisible;
-      ui.networkReset.disabled = state.volts.size === VOLTAGE.length && state.showSubs;
+      ui.networkReset.disabled = state.volts.size === VOLTAGE.length && state.showSubs && state.showOffshore;
     }
 
     function syncPlantStatusButtons() {
@@ -1190,6 +1474,13 @@
       applyFilters();
     }
 
+    function selectOnlyRegion(region) {
+      if (!ALL_REGIONS.includes(region)) return;
+      state.regions = new Set([region]);
+      syncRegionControls();
+      applyFilters();
+    }
+
     function toggleRegionGroup(groupKey) {
       if (!REGION_GROUPS[groupKey]) return;
       state.openRegionGroup = state.openRegionGroup === groupKey ? null : groupKey;
@@ -1200,8 +1491,13 @@
       document.querySelectorAll(".region-options").forEach(container => {
         const group = REGION_GROUPS[container.dataset.regionOptions];
         container.innerHTML = group.regions.map(([region, label]) =>
-          `<label class="region-option"><input type="checkbox" data-region="${escapeHtml(region)}"><span>${escapeHtml(label)}</span></label>`
+          `<div class="region-option-row"><label class="region-option"><input type="checkbox" data-region="${escapeHtml(region)}"><span>${escapeHtml(label)}</span></label>` +
+          `<button class="only-button" type="button" data-only-region="${escapeHtml(region)}" aria-label="Show only ${escapeHtml(label)}">Only [+]</button></div>`
         ).join("");
+        container.addEventListener("click", event => {
+          const button = event.target.closest("[data-only-region]");
+          if (button) selectOnlyRegion(button.dataset.onlyRegion);
+        });
         container.addEventListener("change", event => {
           const input = event.target.closest("input[data-region]");
           if (!input) return;
@@ -1231,21 +1527,53 @@
     function resetNetwork() {
       resetSelection(ui.voltageFilters, state.volts, VOLTAGE);
       setShowSubs(true);
+      setShowOffshore(true);
       applyFilters();
+    }
+
+    function setShowOffshore(show) {
+      state.showOffshore = show;
+      ui.offshoreToggle.setAttribute("aria-checked", String(show));
+      if (!show) applyVisibility();
+      ensureNetworkLayers();
+      updateResetButtons();
     }
 
     function setShowSubs(show) {
       state.showSubs = show;
       ui.subsToggle.setAttribute("aria-checked", String(show));
-      applyVisibility();
+      if (!show) applyVisibility();
+      ensureNetworkLayers();
       updateResetButtons();
     }
 
     function applyVisibility() {
       const visible = new Set(MODE_LAYERS[state.mode]);
-      if (!state.showSubs) visible.delete("substations");
+      if (state.mode === "network" && state.volts.size === 1 && state.volts.has("dc")) {
+        visible.delete("tx-lines");
+        visible.delete("tx-lines-hit");
+        visible.delete("substations");
+      } else {
+        visible.delete("tx-lines-dc");
+        visible.delete("tx-lines-dc-hit");
+        visible.delete("dc-substations");
+      }
+      if (!state.showSubs) {
+        visible.delete("substations");
+        visible.delete("dc-substations");
+      }
+      if (!state.showOffshore) {
+        visible.delete("offshore-cables");
+        visible.delete("offshore-cables-hit");
+      }
       [...MODE_LAYERS.plants, ...MODE_LAYERS.network].forEach(id => {
         if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible.has(id) ? "visible" : "none");
+      });
+    }
+
+    function hideLayers(layerIds) {
+      layerIds.forEach(id => {
+        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
       });
     }
 
@@ -1301,6 +1629,7 @@
     // ---- Layers ----
     function addLayerOrdered(layer) {
       if (map.getLayer(layer.id)) return;
+      layer.layout = { ...(layer.layout || {}), visibility: "none" };
       const later = LAYER_ORDER.slice(LAYER_ORDER.indexOf(layer.id) + 1).find(id => map.getLayer(id));
       map.addLayer(layer, later);
     }
@@ -1309,12 +1638,52 @@
       if (!map.getSource(id)) map.addSource(id, source);
     }
 
+    function waitForSourcesLoaded(sourceIds) {
+      return Promise.all([...new Set(sourceIds)].map(sourceId => {
+        if (map.isSourceLoaded(sourceId)) return Promise.resolve();
+        return new Promise(resolve => {
+          const finish = () => {
+            map.off("sourcedata", onSourceData);
+            clearTimeout(timer);
+            resolve();
+          };
+          const onSourceData = event => {
+            if (event.sourceId === sourceId && map.isSourceLoaded(sourceId)) finish();
+          };
+          // Hidden layers may never request tiles; never block reveal on them.
+          const timer = setTimeout(finish, 1500);
+          map.on("sourcedata", onSourceData);
+        });
+      }));
+    }
+
     function lineWidth(base) {
       return ["interpolate", ["linear"], ["zoom"],
         3, ["*", base, ["match", ["get", "vclass"], ["735", "500"], 1.3, "345", 1.0, "dc", 1.0, 0.55]],
         6, ["*", base, ["match", ["get", "vclass"], ["735", "500"], 2.2, "345", 1.8, "dc", 1.8, 1.0]],
         10, ["*", base, ["match", ["get", "vclass"], ["735", "500"], 3.5, "345", 3.0, "dc", 3.0, 2.0]]
       ];
+    }
+
+    function addSubstationLayer(id, features, dark, filter, paintOverride) {
+      addSource(id, { type: "geojson", data: features, buffer: 16 });
+      addLayerOrdered({
+        id, type: "circle", source: id,
+        ...(filter ? { filter } : {}),
+        layout: { "circle-sort-key": ["get", "vrank"] },
+        paint: paintOverride || {
+          "circle-color": voltColor,
+          "circle-radius": ["interpolate", ["linear"], ["zoom"],
+            3, ["*", 0.25, ["+", 2, ["get", "vrank"]]],
+            6, ["*", 0.5, ["+", 2, ["get", "vrank"]]],
+            9, ["*", 0.85, ["+", 2, ["get", "vrank"]]],
+            13, ["*", 1.3, ["+", 2, ["get", "vrank"]]]
+          ],
+          "circle-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.8, 7, 1],
+          "circle-stroke-color": dark ? "#0f1a22" : "#ffffff",
+          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 4, 0, 7, 0.8, 12, 1.4]
+        }
+      });
     }
 
     const LAYER_BUILDERS = {
@@ -1327,7 +1696,7 @@
         });
       },
       async lines(dark) {
-        addSource("tx-lines", { type: "geojson", data: await data.lines, tolerance: 0.6, buffer: 32 });
+        addSource("tx-lines", { type: "geojson", data: await loadLines(), tolerance: 0.6, buffer: 32 });
         addLayerOrdered({
           id: "tx-lines", type: "line", source: "tx-lines", filter: voltFilter(),
           layout: { "line-join": "round", "line-cap": "round", "line-sort-key": ["get", "vrank"] },
@@ -1339,36 +1708,73 @@
           paint: { "line-color": "#000", "line-opacity": 0, "line-width": 8 }
         });
       },
-      async substations(dark) {
-        addSource("substations", { type: "geojson", data: await data.substations, buffer: 16 });
+      async dcLines(dark) {
+        addSource("tx-lines-dc", { type: "geojson", data: await loadDcLines(), tolerance: 0 });
         addLayerOrdered({
-          id: "substations", type: "circle", source: "substations", filter: voltFilter(),
-          layout: { "circle-sort-key": ["get", "vrank"] },
+          id: "tx-lines-dc", type: "line", source: "tx-lines-dc", filter: voltFilter(),
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": voltColor, "line-opacity": dark ? 0.9 : 0.85, "line-width": lineWidth(1) }
+        });
+        addLayerOrdered({
+          id: "tx-lines-dc-hit", type: "line", source: "tx-lines-dc", filter: voltFilter(),
+          paint: { "line-color": "#000", "line-opacity": 0, "line-width": 8 }
+        });
+      },
+      async hvdc() {
+        addSource("sunzia-route", {
+          type: "geojson",
+          data: await loadSunziaRoute(),
+          tolerance: 0
+        });
+        addLayerOrdered({
+          id: "hvdc-line", type: "line", source: "sunzia-route", filter: voltFilter(),
+          layout: { "line-join": "round", "line-cap": "round" },
           paint: {
-            "circle-color": voltColor,
-            "circle-radius": ["interpolate", ["linear"], ["zoom"],
-              3, ["*", 0.25, ["+", 2, ["get", "vrank"]]],
-              6, ["*", 0.5, ["+", 2, ["get", "vrank"]]],
-              9, ["*", 0.85, ["+", 2, ["get", "vrank"]]],
-              13, ["*", 1.3, ["+", 2, ["get", "vrank"]]]
-            ],
-            "circle-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.8, 7, 1],
-            "circle-stroke-color": dark ? "#0f1a22" : "#ffffff",
-            "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 4, 0, 7, 0.8, 12, 1.4]
+            "line-color": voltColor,
+            "line-opacity": 1,
+            "line-width": ["interpolate", ["linear"], ["zoom"], 3, 3, 6, 2.5, 10, 2]
           }
         });
       },
+      async offshore(dark) {
+        const cables = await loadOffshoreCables();
+        addSource("offshore-cables", { type: "geojson", data: cables, tolerance: 0.3 });
+        addLayerOrdered({
+          id: "offshore-cables", type: "line", source: "offshore-cables", filter: offshoreFilter(),
+          layout: { "line-join": "round", "line-cap": "butt", "line-sort-key": ["get", "vrank"] },
+          paint: {
+            "line-color": voltColor,
+            "line-opacity": dark ? 0.95 : 0.9,
+            "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 6, 2, 10, 3],
+            "line-dasharray": [2, 1.2]
+          }
+        });
+        addLayerOrdered({
+          id: "offshore-cables-hit", type: "line", source: "offshore-cables", filter: offshoreFilter(),
+          paint: { "line-color": "#000", "line-opacity": 0, "line-width": 8 }
+        });
+      },
+      async substations(dark) {
+        addSubstationLayer("substations", await loadSubstations(), dark, voltFilter());
+      },
+      async dcSubstations(dark) {
+        // Only a handful of DC terminals exist, so draw them large enough to see nationally.
+        addSubstationLayer("dc-substations", await loadDcSubstations(), dark, null, {
+          "circle-color": VOLTAGE.find(([key]) => key === "dc")[2],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 4.5, 6, 6.5, 10, 9, 13, 11],
+          "circle-opacity": 1,
+          "circle-stroke-width": 0
+        });
+      },
       async plants(dark) {
-        addSource("power-plants", { type: "geojson", data: await loadCurrentPlantData() });
+        const plants = await loadCurrentPlantData();
+        addSource("power-plants", { type: "geojson", data: plants });
         addLayerOrdered({
           id: "power-plants", type: "circle", source: "power-plants", filter: plantFilter(),
           layout: { "circle-sort-key": ["-", 0, ["get", "cap"]] },
           paint: {
             "circle-color": techColor,
-            "circle-radius": ["interpolate", ["linear"], ["zoom"],
-              3, ["interpolate", ["linear"], ["sqrt", ["get", "cap"]], 0, 2.5, 60, 9],
-              10, ["interpolate", ["linear"], ["sqrt", ["get", "cap"]], 0, 4.5, 60, 22]
-            ],
+            "circle-radius": plantRadiusExpression(plantCapacityScaleMax(plants.features)),
             "circle-opacity": 0.88,
             "circle-stroke-color": dark ? "#0f1a22" : "#ffffff",
             "circle-stroke-width": 0.6
@@ -1377,33 +1783,122 @@
       }
     };
 
-    // Called on every style load (theme switches reset the style). Each dataset is added
-    // as soon as it arrives, so the faster datasets do not wait on the larger ones.
-    function addDataLayers() {
-      const dark = state.theme === "dark";
-      Object.values(LAYER_BUILDERS).forEach(build => build(dark)
-        .then(() => { applyVisibility(); })
-        .catch(showError));
+    const LAYER_IDS = {
+      regions: "iso-regions",
+      plants: "power-plants",
+      lines: "tx-lines",
+      dcLines: "tx-lines-dc",
+      hvdc: "hvdc-line",
+      offshore: "offshore-cables",
+      substations: "substations",
+      dcSubstations: "dc-substations"
+    };
+
+    const layerBuildPromises = new Map();
+    let networkLayerBatch = 0;
+    function ensureLayer(name) {
+      const id = LAYER_IDS[name];
+      if (map.getLayer(id)) return Promise.resolve();
+      if (!layerBuildPromises.has(name)) {
+        const promise = LAYER_BUILDERS[name](state.theme === "dark")
+          .then(() => {
+            if (!NETWORK_LAYER_IDS.has(id) && state.mode === "plants") applyVisibility();
+          })
+          .catch(error => {
+            layerBuildPromises.delete(name);
+            throw error;
+          });
+        layerBuildPromises.set(name, promise);
+      }
+      return layerBuildPromises.get(name);
     }
-    map.on("style.load", addDataLayers);
+
+    function ensureNetworkLayers() {
+      // isStyleLoaded() is false while tiles load, which would skip layer builds.
+      if (state.mode !== "network" || !styleReady) return;
+      const batch = ++networkLayerBatch;
+      hideLayers(MODE_LAYERS.network);
+      const hasDc = state.volts.has("dc");
+      const hasAc = [...state.volts].some(voltage => voltage !== "dc");
+      const dcOnly = state.volts.size === 1 && hasDc;
+      const layers = [];
+      if (hasDc) layers.push("dcLines", "hvdc");
+      if (hasAc) layers.push("lines");
+      if (state.showOffshore && state.volts.size) layers.push("offshore");
+      if (state.showSubs) {
+        layers.push(dcOnly ? "dcSubstations" : "substations");
+      }
+      void Promise.all(layers.map(name => name === "offshore"
+        ? ensureLayer(name).catch(error => showError(new Error(
+            `offshore wind cables (${error.message || error}). Restart the map server once so it loads the new /api/offshore-cables-geojson route, then refresh.`
+          )))
+        : ensureLayer(name)))
+        .then(() => waitForSourcesLoaded(layers
+          .map(name => map.getLayer(LAYER_IDS[name])?.source)
+          .filter(Boolean)))
+        .then(() => {
+          if (state.mode === "network" && batch === networkLayerBatch) applyVisibility();
+        })
+        .catch(showError);
+    }
+
+    // Load large network datasets only when their layers are needed.
+    function addDataLayers() {
+      layerBuildPromises.clear();
+      void Promise.all(["regions", "plants"].map(ensureLayer)).catch(showError);
+      ensureNetworkLayers();
+    }
+    let styleReady = false;
+    map.on("style.load", () => {
+      styleReady = true;
+      addDataLayers();
+    });
 
     // ---- Popups ----
     const VOLT_LABEL = Object.fromEntries(VOLTAGE.map(([key, label]) => [key, label]));
     const openPopup = (lngLat, html) => new mapboxgl.Popup({ maxWidth: "290px" }).setLngLat(lngLat).setHTML(html).addTo(map);
 
-    map.on("click", "tx-lines-hit", e => {
+    function openTransmissionLinePopup(e) {
       const p = e.features[0].properties;
-      openPopup(e.lngLat, popupHtml(p.line_id ? `Transmission line ${p.line_id}` : "Transmission line", [
-        ["Voltage", Number(p.voltage) > 0 ? `${p.voltage} kV` : VOLT_LABEL[p.vclass]],
-        ["Owner", titleCase(p.owner)],
-        ["Type", titleCase(p.type)],
-        ["Status", titleCase(p.status)],
-        ["From", p.from_substation],
-        ["To", p.to_substation]
+      const isDc = p.vclass === "dc";
+      const voltage = Number(p.voltage) > 0
+        ? `${p.voltage} kV${isDc ? " DC" : ""}`
+        : VOLT_LABEL[p.vclass];
+      const rows = p.line_name
+        ? [["Voltage", voltage], ["Operator", p.operator]]
+        : [
+            ["Voltage", voltage],
+            [isDc ? "Operator" : "Owner", titleCase(isDc ? p.operator : p.owner)],
+            ["Type", titleCase(p.type)],
+            ["Status", titleCase(p.status)],
+            ["From", p.from_substation],
+            ["To", p.to_substation]
+          ];
+      if (p.current_type || p.capacity_mw !== undefined) {
+        rows.push(
+          ["Type", p.current_type],
+          ["Capacity", p.capacity_mw === undefined ? null : `${p.capacity_mw} MW`],
+          ["Status", titleCase(p.status)]
+        );
+      }
+      openPopup(e.lngLat, popupHtml(
+        p.line_name || (p.line_id ? `Transmission line ${p.line_id}` : "Transmission line"),
+        rows
+      ));
+    }
+    map.on("click", "tx-lines-hit", openTransmissionLinePopup);
+    map.on("click", "tx-lines-dc-hit", openTransmissionLinePopup);
+
+    map.on("click", "hvdc-line", e => {
+      const p = e.features[0].properties;
+      openPopup(e.lngLat, popupHtml(p.name || "SunZia Transmission Project", [
+        ["Voltage", `${Number(p.voltage)} kV DC`],
+        ["Operator", p.owner],
+        ["Type", titleCase(p.power)]
       ]));
     });
 
-    map.on("click", "substations", e => {
+    function openSubstationPopup(e) {
       const f = e.features[0];
       const p = f.properties;
       const name = String(p.name || "").startsWith("UNKNOWN") ? `Substation ${p.station_id}` : titleCase(p.name);
@@ -1415,18 +1910,37 @@
         ["Status", titleCase(p.status)],
         ["Location", [titleCase(p.city), p.state].filter(Boolean).join(", ")]
       ]));
-    });
+    }
+    map.on("click", "substations", openSubstationPopup);
+    map.on("click", "dc-substations", openSubstationPopup);
 
     map.on("click", "power-plants", e => {
       const f = e.features[0];
       const p = f.properties;
       openPopup(
         f.geometry.coordinates,
-        popupHtml(titleCase(p["Plant Name"] || p.name) || "Power plant", workbookFieldRows(p))
+        popupHtml("Power Plant", workbookFieldRows(p))
       );
     });
 
-    ["tx-lines-hit", "substations", "power-plants"].forEach(id => {
+    map.on("click", "offshore-cables-hit", e => {
+      const p = e.features[0].properties;
+      const length = Number(p.length_km);
+      openPopup(e.lngLat, popupHtml(p.name, [
+        ["Developer", p.developer],
+        ["Current", p.current],
+        ["Voltage", p.kv_rating ? `${p.kv_rating}${/kv/i.test(p.kv_rating) ? "" : " kV"}` : null],
+        ["Cable", p.cable_type],
+        ["Status", p.status],
+        ["Route", p.route],
+        ["Option", p.option],
+        ["Area", p.area],
+        ["Lease", p.lease],
+        ["Length", length > 0 ? `${length.toFixed(1)} km` : null]
+      ]));
+    });
+
+    ["tx-lines-hit", "tx-lines-dc-hit", "hvdc-line", "offshore-cables-hit", "substations", "dc-substations", "power-plants"].forEach(id => {
       map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
     });
@@ -1438,7 +1952,13 @@
       ui.networkButton.setAttribute("aria-pressed", String(mode === "network"));
       ui.plantsPanel.hidden = mode !== "plants";
       ui.networkPanel.hidden = mode !== "network";
-      applyVisibility();
+      if (mode === "network") {
+        hideLayers([...MODE_LAYERS.plants, ...MODE_LAYERS.network]);
+        ensureNetworkLayers();
+      } else {
+        networkLayerBatch += 1;
+        applyVisibility();
+      }
     }
 
     renderFilterList(ui.techFilters, PLANT_TECH, state.techs, "swatch-dot", true);
@@ -1458,6 +1978,7 @@
     ui.capMin.addEventListener("input", () => updateCapacity(ui.capMin));
     ui.capMax.addEventListener("input", () => updateCapacity(ui.capMax));
     ui.subsToggle.addEventListener("click", () => setShowSubs(!state.showSubs));
+    ui.offshoreToggle.addEventListener("click", () => setShowOffshore(!state.showOffshore));
     ui.plantsReset.addEventListener("click", resetPlants);
     ui.networkReset.addEventListener("click", resetNetwork);
     const aboutOverlay = $("about-overlay");
@@ -1478,6 +1999,7 @@
       document.documentElement.dataset.theme = state.theme;
       localStorage.setItem("dart-map-theme", state.theme);
       updateThemeLabel();
+      styleReady = false;
       map.setStyle(STYLES[state.theme]);
     });
     function updateThemeLabel() {

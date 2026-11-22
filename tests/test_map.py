@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -13,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from dart_tool.map import (
     MapRepository,
     MapRequestHandler,
+    offshore_cable_properties,
     read_operating_plant_features,
     read_plant_sheet_features,
     read_point_features,
@@ -20,6 +22,259 @@ from dart_tool.map import (
 
 
 class MapDataTests(unittest.TestCase):
+    def test_offshore_cables_classify_current_and_voltage(self):
+        dc = offshore_cable_properties(
+            {"ELECTRIC_CURRENT_TYPE": "DC", "KILOVOLT_RATING": "320-525", "PROJECT_NAME": "<Null>"}
+        )
+        self.assertEqual(
+            (dc["current"], dc["dc_capable"], dc["voltage"], dc["name"]),
+            ("DC", True, 525.0, "Offshore wind export cable"),
+        )
+        hybrid = offshore_cable_properties(
+            {
+                "ELECTRIC_CURRENT_TYPE": "AC and/or DC",
+                "KILOVOLT_RATING": "230-275 kV (HVAC) and/or 320-525 kV (HVDC)",
+                "PROJECT_NAME": "Beacon Wind 1 ",
+            }
+        )
+        self.assertEqual(
+            (hybrid["current"], hybrid["dc_capable"], hybrid["voltage"], hybrid["name"]),
+            ("AC / DC", True, 230.0, "Beacon Wind 1"),
+        )
+        ac = offshore_cable_properties({"ELECTRIC_CURRENT_TYPE": "AC", "KILOVOLT_RATING": "275"})
+        self.assertEqual((ac["current"], ac["dc_capable"], ac["voltage"]), ("AC", False, 275.0))
+
+    def test_offshore_cables_skip_missing_geometry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "tx_lines" / "offshore_wind_tx_cables.geojson"
+            path.parent.mkdir()
+            line = {"type": "LineString", "coordinates": [[-70, 41], [-71, 41.5]]}
+            path.write_text(json.dumps({"type": "FeatureCollection", "features": [
+                {"type": "Feature", "geometry": line, "properties": {"ELECTRIC_CURRENT_TYPE": "DC"}},
+                {"type": "Feature", "geometry": None, "properties": {"ELECTRIC_CURRENT_TYPE": "AC"}},
+            ]}), encoding="utf-8")
+            features = MapRepository(Path(tmp)).offshore_cables()["features"]
+        self.assertEqual(len(features), 1)
+        self.assertEqual(features[0]["properties"]["current"], "DC")
+
+    def test_sunzia_asset_is_one_linestring(self):
+        source_path = (
+            Path(__file__).resolve().parents[1]
+            / "src"
+            / "dart_tool"
+            / "data"
+            / "tx_lines"
+            / "sunzia_transmission_project.geojson"
+        )
+        collection = json.loads(source_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(collection["type"], "FeatureCollection")
+        self.assertEqual(len(collection["features"]), 1)
+        self.assertEqual(collection["features"][0]["geometry"]["type"], "LineString")
+
+    def test_sunzia_route_is_exposed_and_reloaded_when_source_changes(self):
+        source_feature = {
+            "type": "Feature",
+            "id": "sunzia-route",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [[0, 0], [1, 1]],
+            },
+            "properties": {
+                "name": "SunZia Transmission Project",
+                "o": "Pattern Energy",
+                "power": "line",
+                "v": 525000,
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            tx_lines_dir = Path(directory) / "tx_lines"
+            tx_lines_dir.mkdir()
+            source_path = tx_lines_dir / "sunzia_transmission_project.geojson"
+
+            def write_source():
+                source_path.write_text(
+                json.dumps(
+                    {
+                        "type": "FeatureCollection",
+                        "features": [source_feature],
+                    }
+                ),
+                encoding="utf-8",
+            )
+ 
+            write_source()
+
+            repository = MapRepository(Path(directory))
+            collection = repository.hvdc_lines()
+
+            self.assertIs(repository.hvdc_lines(), collection)
+            source_mtime = source_path.stat().st_mtime_ns
+            source_feature["geometry"]["coordinates"] = [[0, 0], [2, 2]]
+            write_source()
+            os.utime(
+                source_path,
+                ns=(source_mtime, source_mtime + 1_000_000_000),
+            )
+            updated_collection = repository.hvdc_lines()
+
+        self.assertEqual(len(collection["features"]), 1)
+        feature = collection["features"][0]
+        self.assertEqual(feature["id"], "sunzia-route")
+        self.assertEqual(feature["geometry"]["type"], "LineString")
+        self.assertEqual(feature["properties"]["ID"], "SunZia Transmission Project")
+        self.assertEqual(feature["properties"]["TYPE"], "DC")
+        self.assertEqual(feature["properties"]["VOLT_CLASS"], "DC")
+        self.assertEqual(feature["properties"]["VOLTAGE"], 525)
+        self.assertEqual(feature["properties"]["OWNER"], "Pattern Energy")
+        self.assertIsNot(updated_collection, collection)
+        self.assertEqual(
+            updated_collection["features"][0]["geometry"]["coordinates"],
+            [[0, 0], [2, 2]],
+        )
+
+    def test_sunzia_repository_rejects_multiline_geometry(self):
+        source_feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "MultiLineString",
+                "coordinates": [[[0, 0], [1, 1]], [[2, 2], [3, 3]]],
+            },
+            "properties": {"v": 525000},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            tx_lines_dir = Path(directory) / "tx_lines"
+            tx_lines_dir.mkdir()
+            source_path = tx_lines_dir / "sunzia_transmission_project.geojson"
+            source_path.write_text(
+                json.dumps({"type": "FeatureCollection", "features": [source_feature]}),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "single LineString"):
+                MapRepository(Path(directory)).hvdc_lines()
+
+    def test_dc_transmission_lines_loads_pre_extracted_records(self):
+        features = [
+            {
+                "type": "Feature",
+                "id": "dc-by-type",
+                "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+                "properties": {"TYPE": "DC; OVERHEAD", "VOLT_CLASS": "Unknown"},
+            },
+            {
+                "type": "Feature",
+                "id": "dc-by-class",
+                "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+                "properties": {"TYPE": "NOT AVAILABLE", "VOLT_CLASS": "DC"},
+            },
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            tx_lines_dir = Path(directory) / "tx_lines"
+            tx_lines_dir.mkdir()
+            source_path = tx_lines_dir / "tx_lines_dc.geojson"
+            source_path.write_text(
+                json.dumps({"type": "FeatureCollection", "features": features}),
+                encoding="utf-8",
+            )
+
+            result = MapRepository(Path(directory)).dc_transmission_lines()
+
+        self.assertEqual(
+            [feature["id"] for feature in result["features"]],
+            ["dc-by-type", "dc-by-class"],
+        )
+
+    def test_dc_transmission_lines_preserves_custom_name_and_operator(self):
+        feature = {
+            "type": "Feature",
+            "id": 7276,
+            "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+            "properties": {
+                "ID": "108354",
+                "NAME": "Square Butte HVDC 250kV transmission line",
+                "OPERATOR": "ALLETE, Inc.",
+                "TYPE": "DC; OVERHEAD",
+                "VOLTAGE": 250,
+                "VOLT_CLASS": "DC",
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            tx_lines_dir = Path(directory) / "tx_lines"
+            tx_lines_dir.mkdir()
+            source_path = tx_lines_dir / "tx_lines_dc.geojson"
+            source_path.write_text(
+                json.dumps({"type": "FeatureCollection", "features": [feature]}),
+                encoding="utf-8",
+            )
+
+            result = MapRepository(Path(directory)).dc_transmission_lines()
+
+        properties = result["features"][0]["properties"]
+        self.assertEqual(properties["NAME"], "Square Butte HVDC 250kV transmission line")
+        self.assertEqual(properties["OPERATOR"], "ALLETE, Inc.")
+
+    def test_dc_substations_includes_only_dc_line_endpoints(self):
+        line = {
+            "type": "Feature",
+            "id": "dc-line",
+            "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+            "properties": {
+                "TYPE": "DC; OVERHEAD",
+                "VOLT_CLASS": "DC",
+                "SUB_1": "NORTH STATION",
+                "SUB_2": "SOUTH STATION",
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            data_dir = Path(directory)
+            tx_lines_dir = data_dir / "tx_lines"
+            tx_lines_dir.mkdir()
+            (tx_lines_dir / "tx_lines_dc.geojson").write_text(
+                json.dumps({"type": "FeatureCollection", "features": [line]}),
+                encoding="utf-8",
+            )
+            substation_dir = data_dir / "substations"
+            substation_dir.mkdir()
+            with (substation_dir / "Substations.csv").open(
+                "w", encoding="utf-8", newline=""
+            ) as output:
+                writer = csv.DictWriter(
+                    output,
+                    fieldnames=[
+                        "ID", "NAME", "LATITUDE", "LONGITUDE", "CITY", "STATE",
+                        "STATUS", "TYPE", "MAX_VOLT", "MIN_VOLT",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerows(
+                    [
+                        {
+                            "ID": "1", "NAME": "NORTH STATION", "LATITUDE": 0,
+                            "LONGITUDE": 0, "MAX_VOLT": 500,
+                        },
+                        {
+                            "ID": "2", "NAME": "SOUTH STATION", "LATITUDE": 1,
+                            "LONGITUDE": 1, "MAX_VOLT": 500,
+                        },
+                        {
+                            "ID": "3", "NAME": "UNRELATED STATION", "LATITUDE": 0.5,
+                            "LONGITUDE": 0.5, "MAX_VOLT": 230,
+                        },
+                        {
+                            "ID": "4", "NAME": "NORTH STATION", "LATITUDE": 0,
+                            "LONGITUDE": 0.01, "MAX_VOLT": 230,
+                        },
+                    ]
+                )
+
+            result = MapRepository(data_dir).dc_substations()
+
+        self.assertEqual(
+            [feature["properties"]["station_id"] for feature in result["features"]],
+            ["1", "2"],
+        )
+
     def test_power_plant_repository_loads_and_caches_status_geojson(self):
         feature = {
             "type": "Feature",

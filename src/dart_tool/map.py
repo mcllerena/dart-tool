@@ -10,6 +10,7 @@ import logging
 import math
 import os
 import posixpath
+import re
 import webbrowser
 import xml.etree.ElementTree as ET
 import zipfile
@@ -28,6 +29,49 @@ DEFAULT_MAPBOX_TOKEN = (
     "i-EY2QOnI4Vs2KH9NokNmw"
 )
 GEOJSON_PATH = DATA_DIR / "tx_lines" / "tx_lines_complete_hifld.geojson"
+DC_GEOJSON_PATH = DATA_DIR / "tx_lines" / "tx_lines_dc.geojson"
+HVDC_GEOJSON_PATH = DATA_DIR / "tx_lines" / "sunzia_transmission_project.geojson"
+OFFSHORE_CABLES_PATH = DATA_DIR / "tx_lines" / "offshore_wind_tx_cables.geojson"
+_KV_NUMBER = re.compile(r"\d+(?:\.\d+)?")
+
+
+def _clean_cable_text(value: Any) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    return None if text in {"", "<Null>", "None", "NA"} else text
+
+
+def offshore_cable_properties(raw: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a BOEM offshore wind export cable record for the map."""
+    current = (_clean_cable_text(raw.get("ELECTRIC_CURRENT_TYPE")) or "TBD").upper()
+    has_dc = "DC" in current
+    has_ac = "AC" in current
+    current_label = "DC" if has_dc and not has_ac else "AC" if has_ac and not has_dc else (
+        "AC / DC" if has_dc else "TBD"
+    )
+    rating = _clean_cable_text(raw.get("KILOVOLT_RATING"))
+    numbers = [float(n) for n in _KV_NUMBER.findall(rating or "")]
+    if current_label == "DC":
+        voltage = max(numbers, default=None)
+    else:
+        voltage = numbers[0] if numbers else None
+    project = _clean_cable_text(raw.get("PROJECT_NAME"))
+    return {
+        "name": project or "Offshore wind export cable",
+        "developer": _clean_cable_text(raw.get("DEVELOPER_NAME")),
+        "lease": _clean_cable_text(raw.get("LEASE_NUMBER")),
+        "route": _clean_cable_text(raw.get("ROUTE_NAME")),
+        "option": _clean_cable_text(raw.get("OPTION_NUMBER")),
+        "area": _clean_cable_text(raw.get("FEATURE_AREA_TYPE")),
+        "cable_type": _clean_cable_text(raw.get("CABLE_TYPE")),
+        "current": current_label,
+        "dc_capable": has_dc,
+        "kv_rating": rating,
+        "voltage": voltage,
+        "status": _clean_cable_text(raw.get("STATUS")),
+        "length_km": raw.get("LENGTH_KILOMETERS"),
+    }
+DC_SUBSTATION_NAME_TOLERANCE_M = 5_000
+DC_SUBSTATION_ENDPOINT_TOLERANCE_M = 2_000
 PLANT_SHEET_STATUSES = {
     "Operating": "operating",
     "Operating_PR": "operating",
@@ -403,6 +447,128 @@ class MapRepository:
             )
         return self._point_cache[layer_name]
 
+    def dc_transmission_lines(self) -> dict[str, Any]:
+        cache_key = "dc-transmission-lines"
+        path = self.data_dir / DC_GEOJSON_PATH.relative_to(DATA_DIR)
+        modified_at = path.stat().st_mtime_ns
+        modified_at_key = f"{cache_key}:modified-at"
+        if self._point_cache.get(modified_at_key) != modified_at:
+            collection = json.loads(path.read_text(encoding="utf-8"))
+            if collection.get("type") != "FeatureCollection":
+                raise ValueError(f"{path} must contain a GeoJSON FeatureCollection")
+            features = collection.get("features")
+            if not isinstance(features, list):
+                raise ValueError(f"{path} has no GeoJSON features array")
+            self._point_cache[cache_key] = {
+                "type": "FeatureCollection",
+                "features": features,
+            }
+            self._point_cache[modified_at_key] = modified_at
+        return self._point_cache[cache_key]
+
+    def dc_substations(self) -> dict[str, Any]:
+        cache_key = "dc-substations"
+        dc_lines_path = self.data_dir / DC_GEOJSON_PATH.relative_to(DATA_DIR)
+        substation_path = (
+            self.data_dir / POINT_LAYERS["substations"]["filename"].relative_to(DATA_DIR)
+        )
+        modified_at = (
+            dc_lines_path.stat().st_mtime_ns,
+            substation_path.stat().st_mtime_ns,
+        )
+        modified_at_key = f"{cache_key}:modified-at"
+        if self._point_cache.get(modified_at_key) != modified_at:
+            named_endpoint_queries: list[tuple[str, list[list[float]]]] = []
+            unnamed_endpoints: list[list[float]] = []
+            for feature in self.dc_transmission_lines()["features"]:
+                properties = feature.get("properties") or {}
+                geometry = feature.get("geometry") or {}
+                coordinates = geometry.get("coordinates") or []
+                if geometry.get("type") == "LineString":
+                    lines = [coordinates]
+                elif geometry.get("type") == "MultiLineString":
+                    lines = coordinates
+                else:
+                    continue
+                endpoints = [
+                    point[:2]
+                    for line in lines
+                    if line
+                    for point in (line[0], line[-1])
+                    if len(point) >= 2
+                ]
+                if not endpoints:
+                    continue
+                endpoint_names = [
+                    str(properties.get(key) or "").strip()
+                    for key in ("SUB_1", "SUB_2")
+                ]
+                for index, name in enumerate(endpoint_names):
+                    if name and name.upper() not in {"NOT AVAILABLE", "N/A", "UNKNOWN"}:
+                        named_endpoint_queries.append((name.casefold(), endpoints))
+                    elif index < len(endpoints):
+                        unnamed_endpoints.append(endpoints[index])
+
+            substations = self.points("substations")["features"]
+            substations_by_name: dict[str, list[dict[str, Any]]] = {}
+            for feature in substations:
+                properties = feature.get("properties") or {}
+                name = str(properties.get("name") or "").strip().casefold()
+                if name:
+                    substations_by_name.setdefault(name, []).append(feature)
+
+            selected_ids: set[str] = set()
+
+            def distance_m(first: list[float], second: list[float]) -> float:
+                latitude = math.radians((first[1] + second[1]) / 2)
+                return math.hypot(
+                    (first[0] - second[0]) * 111_320 * math.cos(latitude),
+                    (first[1] - second[1]) * 111_320,
+                )
+
+            for name, endpoints in named_endpoint_queries:
+                nearest_distance = float("inf")
+                nearest_feature = None
+                for feature in substations_by_name.get(name, []):
+                    coordinates = feature["geometry"]["coordinates"]
+                    distance = min(
+                        distance_m(coordinates, endpoint)
+                        for endpoint in endpoints
+                    )
+                    if distance < nearest_distance:
+                        nearest_distance = distance
+                        nearest_feature = feature
+                if nearest_distance <= DC_SUBSTATION_NAME_TOLERANCE_M and nearest_feature:
+                    properties = nearest_feature.get("properties") or {}
+                    if properties.get("station_id") is not None:
+                        selected_ids.add(str(properties["station_id"]))
+
+            for endpoint in unnamed_endpoints:
+                nearest: tuple[float, dict[str, Any]] | None = None
+                for feature in substations:
+                    coordinates = feature["geometry"]["coordinates"]
+                    distance = distance_m(coordinates, endpoint)
+                    if distance <= DC_SUBSTATION_ENDPOINT_TOLERANCE_M and (
+                        nearest is None or distance < nearest[0]
+                    ):
+                        nearest = (distance, feature)
+                if nearest is not None:
+                    properties = nearest[1].get("properties") or {}
+                    if properties.get("station_id") is not None:
+                        selected_ids.add(str(properties["station_id"]))
+
+            self._point_cache[cache_key] = {
+                "type": "FeatureCollection",
+                "features": [
+                    feature
+                    for feature in substations
+                    if str(feature.get("properties", {}).get("station_id"))
+                    in selected_ids
+                ],
+            }
+            self._point_cache[modified_at_key] = modified_at
+        return self._point_cache[cache_key]
+
     def plant_features(self, status: str) -> dict[str, Any]:
         if status not in PLANT_STATUS_FILES:
             raise ValueError(f"Unsupported power plant status: {status}")
@@ -427,6 +593,76 @@ class MapRepository:
                 "type": "FeatureCollection",
                 "features": features,
             }
+        return self._point_cache[cache_key]
+
+    def offshore_cables(self) -> dict[str, Any]:
+        cache_key = "offshore-cables"
+        path = self.data_dir / OFFSHORE_CABLES_PATH.relative_to(DATA_DIR)
+        modified_at = path.stat().st_mtime_ns
+        modified_at_key = f"{cache_key}:modified-at"
+        if self._point_cache.get(modified_at_key) != modified_at:
+            collection = json.loads(path.read_text(encoding="utf-8"))
+            if collection.get("type") != "FeatureCollection":
+                raise ValueError(f"{path} must contain a GeoJSON FeatureCollection")
+            features = [
+                {
+                    "type": "Feature",
+                    "id": index,
+                    "geometry": feature["geometry"],
+                    "properties": offshore_cable_properties(feature.get("properties") or {}),
+                }
+                for index, feature in enumerate(collection.get("features", []))
+                if (feature.get("geometry") or {}).get("type") in {"LineString", "MultiLineString"}
+            ]
+            self._point_cache[cache_key] = {
+                "type": "FeatureCollection",
+                "features": features,
+            }
+            self._point_cache[modified_at_key] = modified_at
+        return self._point_cache[cache_key]
+
+    def hvdc_lines(self) -> dict[str, Any]:
+        cache_key = "hvdc-lines"
+        path = self.data_dir / HVDC_GEOJSON_PATH.relative_to(DATA_DIR)
+        modified_at = path.stat().st_mtime_ns
+        modified_at_key = f"{cache_key}:modified-at"
+        if self._point_cache.get(modified_at_key) != modified_at:
+            collection = json.loads(path.read_text(encoding="utf-8"))
+            if collection.get("type") != "FeatureCollection":
+                raise ValueError(f"{path} must contain a GeoJSON FeatureCollection")
+            features = []
+            for source_feature in collection.get("features", []):
+                geometry = source_feature.get("geometry")
+                if geometry is None or geometry.get("type") != "LineString":
+                    raise ValueError("SunZia route must be a single LineString")
+                properties = dict(source_feature.get("properties") or {})
+                voltage = properties.get("v")
+                if not isinstance(voltage, (int, float)) or voltage <= 0:
+                    raise ValueError("SunZia route must include a positive voltage")
+                properties.update(
+                    {
+                        "ID": properties.get("name", "SunZia Transmission Project"),
+                        "TYPE": "DC",
+                        "VOLTAGE": voltage / 1000,
+                        "VOLT_CLASS": "DC",
+                        "OWNER": properties.get("o"),
+                    }
+                )
+                features.append(
+                    {
+                        "type": "Feature",
+                        "id": source_feature.get("id", "sunzia-transmission-project"),
+                        "geometry": geometry,
+                        "properties": properties,
+                    }
+                )
+            if not features:
+                raise ValueError(f"No SunZia transmission route found in {path}")
+            self._point_cache[cache_key] = {
+                "type": "FeatureCollection",
+                "features": features,
+            }
+            self._point_cache[modified_at_key] = modified_at
         return self._point_cache[cache_key]
 
     def iso_regions(self) -> dict[str, Any]:
@@ -495,8 +731,16 @@ class MapRequestHandler(BaseHTTPRequestHandler):
             result = self.server.repository.plant_features(status)
         elif request.path == "/api/substations":
             result = self.server.repository.points("substations")
+        elif request.path == "/api/transmission-lines-dc-geojson":
+            result = self.server.repository.dc_transmission_lines()
+        elif request.path == "/api/dc-substations-geojson":
+            result = self.server.repository.dc_substations()
         elif request.path == "/api/iso-regions":
             result = self.server.repository.iso_regions()
+        elif request.path == "/api/hvdc-geojson":
+            result = self.server.repository.hvdc_lines()
+        elif request.path == "/api/offshore-cables-geojson":
+            result = self.server.repository.offshore_cables()
         elif request.path == "/api/transmission-lines-geojson":
             # Serve pre-computed transmission lines GeoJSON
             if not GEOJSON_PATH.exists():

@@ -14,11 +14,17 @@ and dark map styles.
 The panel in the top-left corner is the legend and filter for the active tab:
 
 - **Power Plants Map**: click a plant technology to show or hide it, and drag
-  the two capacity handles to limit plants to a range of 0 to 1000+ MW.
+  the two capacity handles to limit plants to a range of 0 to 1000+ MW. Marker
+  sizes rescale to the selected technology's capacity range. Expand **All
+  Markets** or **Other/Non-Markets**, then select **Only [+]** beside a region
+  to show plants only in that region.
 - **Infrastructure Map**: click a voltage class to show or hide its
   transmission lines and substations, and use **Show Substations** to turn the
   substation dots on or off. Substations without a recorded voltage are not
-  shown.
+  shown. BOEM offshore wind export cables (`offshore_wind_tx_cables.geojson`)
+  are drawn as dashed lines colored by voltage class; **Show Offshore Wind
+  Cables** toggles them. DC cables, and cables proposed as AC and/or DC, also
+  appear when only **DC** is selected.
 
 Click **Reset** next to a panel title to restore that tab's filters to their
 defaults. It is greyed out when nothing is filtered.
@@ -28,6 +34,31 @@ The page (`src\dart_tool\map_v2.html`) is rendered with
 preconverted power-plant GeoJSON files, the substation CSV, ISO-region GeoJSON
 files, and the complete
 `src\dart_tool\data\tx_lines\tx_lines_complete_hifld.geojson`.
+The large transmission-line file is fetched only when the Infrastructure Map
+tab is selected and an AC voltage class is visible. The Infrastructure Map
+preloads the 17-feature DC subset from
+`src\dart_tool\data\tx_lines\tx_lines_dc.geojson` alongside the SunZia route,
+so choosing DC-only reveals the ready layers without parsing or filtering the
+much larger AC-line file. DC-only mode shows substations matched to DC-line
+endpoints; the substation toggle still controls their visibility.
+Substation data is fetched only when those points are enabled in the
+Infrastructure Map. Plant-to-region matching first checks
+grouped market bounds, then applies the existing polygon containment test to
+candidate boundaries.
+The DC voltage-class layer includes the SunZia route in
+`src\dart_tool\data\tx_lines\sunzia_transmission_project.geojson`. Its geometry
+comes from the BLM **SunZia Preferred Route Major Transmission Line (Draft)**
+feature layer, whose 53 link segments total about 515 miles. Endpoints within
+15 m are joined. The two remaining chains are connected with a straight,
+462 m inferred link so the map displays one continuous path; this connector is
+explicitly marked as inferred in the GeoJSON and is not surveyed BLM geometry.
+The BLM source warns that the draft data may contain errors or omissions and
+is not for engineering or operational use. The 525 kV DC voltage, Pattern
+Energy operator, and line type attributes come from the Grid Status
+transmission map, which attributes its data to OpenStreetMap under the Open
+Database License (ODbL). Source links and attributions are retained in the
+GeoJSON. The original SunZia ROW polygon and proposed tower points remain
+available in `hvdc.csv` as raw project data.
 
 Each coordinate-valid generator row appears as its own map feature; rows with
 repeated Plant IDs are not grouped. The map opens on Operating rows. The
@@ -36,7 +67,9 @@ including their Puerto Rico records. A centered **Canceled/Postponed** button
 shows that sheet. Clicking the selected status button again returns to
 Operating. Technology **Only [+]** controls continue to filter the selected
 view. Each marker uses its row's coordinates and capacity, and its popup shows
-all non-empty columns from that workbook row.
+all non-empty columns from that workbook row. Marker sizes are scaled to the
+selected technologies' 95th-percentile capacity so a single high-capacity
+outlier does not flatten the size differences among other plants.
 
 `src\dart_tool\excel2geojson.py` converts the workbook into one GeoJSON file per
 sheet, retaining the original column names and values as feature properties.
