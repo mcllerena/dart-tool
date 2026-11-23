@@ -5,15 +5,19 @@ from __future__ import annotations
 import argparse
 import csv
 import gzip
+import importlib
 import json
 import logging
 import math
 import os
 import posixpath
 import re
+import sys
+import time
 import webbrowser
 import xml.etree.ElementTree as ET
 import zipfile
+from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -91,6 +95,19 @@ XLSX_MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 XLSX_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 XLSX_PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 logger = logging.getLogger(__name__)
+
+
+def _nodal_price_module() -> Any:
+    package_name = __spec__.parent if __spec__ is not None else ""
+    if package_name:
+        module_name = f"{package_name}.nodal_prices"
+    else:
+        package_dir = str(PACKAGE_DIR)
+        if package_dir not in sys.path:
+            sys.path.insert(0, package_dir)
+        module_name = "nodal_prices"
+    return importlib.import_module(module_name)
+
 
 POINT_LAYERS = {
     "substations": {
@@ -433,6 +450,9 @@ class MapRepository:
     def __init__(self, data_dir: Path = DATA_DIR) -> None:
         self.data_dir = data_dir
         self._point_cache: dict[str, dict[str, Any]] = {}
+        self._nodal_price_cache: dict[
+            tuple[str, str, str, str], tuple[float, dict[str, Any]]
+        ] = {}
 
     def points(self, layer_name: str) -> dict[str, Any]:
         if layer_name == "power-plants":
@@ -446,6 +466,18 @@ class MapRepository:
                 layer_name,
             )
         return self._point_cache[layer_name]
+
+    def nodal_prices(
+        self, iso: str, day: date, market: str, aggregation: str
+    ) -> dict[str, Any]:
+        key = (iso, day.isoformat(), market, aggregation)
+        cached = self._nodal_price_cache.get(key)
+        if cached and time.monotonic() - cached[0] < 120:
+            return cached[1]
+        fetch_nodal_price_geojson = _nodal_price_module().fetch_nodal_price_geojson
+        result = fetch_nodal_price_geojson(iso, day, market, aggregation)
+        self._nodal_price_cache[key] = (time.monotonic(), result)
+        return result
 
     def dc_transmission_lines(self) -> dict[str, Any]:
         cache_key = "dc-transmission-lines"
@@ -741,6 +773,22 @@ class MapRequestHandler(BaseHTTPRequestHandler):
             result = self.server.repository.hvdc_lines()
         elif request.path == "/api/offshore-cables-geojson":
             result = self.server.repository.offshore_cables()
+        elif request.path == "/api/nodal-prices":
+            query = parse_qs(request.query, keep_blank_values=True)
+            iso = query.get("iso", [""])[0].upper()
+            market = query.get("market", ["rt"])[0].lower()
+            aggregation = query.get("aggregation", ["latest"])[0].lower()
+            try:
+                day = date.fromisoformat(query.get("date", [""])[0])
+                result = self.server.repository.nodal_prices(
+                    iso, day, market, aggregation
+                )
+            except ValueError as error:
+                self.send_error(400, str(error))
+                return
+            except RuntimeError as error:
+                self.send_error(502, str(error))
+                return
         elif request.path == "/api/transmission-lines-geojson":
             # Serve pre-computed transmission lines GeoJSON
             if not GEOJSON_PATH.exists():

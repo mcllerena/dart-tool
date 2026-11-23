@@ -1,0 +1,2 @@
+gridstatus>=0.37.0,<0.38
+tzdata>=2024.1

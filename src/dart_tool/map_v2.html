@@ -210,6 +210,7 @@
       height: 16px;
       stroke: currentColor;
     }
+    .mode-short { display: none; }
 
     .topbar-actions {
       display: flex;
@@ -430,6 +431,42 @@
     }
     .region-option:hover { background: var(--accent-soft); }
     .region-option input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
+    .nodal-fields { display: grid; gap: 10px; }
+    .nodal-field { display: grid; gap: 4px; color: var(--muted); font-size: 11px; font-weight: 650; }
+    .nodal-field select,
+    .nodal-field input {
+      width: 100%;
+      min-height: 34px;
+      padding: 6px 8px;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 7px;
+      font: inherit;
+      font-weight: 500;
+    }
+    .nodal-refresh {
+      min-height: 34px;
+      color: #fff;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 7px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+    .nodal-refresh:hover { filter: brightness(1.08); }
+    .nodal-refresh:disabled { opacity: 0.55; cursor: not-allowed; }
+    .nodal-status { min-height: 2.4em; color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .nodal-status[data-error="true"] { color: #dc2626; }
+    .price-legend { display: grid; gap: 5px; font-size: 11px; }
+    .price-legend-gradient {
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #2563eb 0%, #facc15 50%, #dc2626 100%);
+    }
+    .price-legend-values { display: flex; justify-content: space-between; color: var(--muted); }
+    .nodal-note { color: var(--muted); font-size: 10px; line-height: 1.4; }
     .swatch-dot {
       width: 13px;
       height: 13px;
@@ -620,6 +657,9 @@
       .brand { display: none; }
       .mode-switch { justify-self: start; gap: 4px; }
       .mode-button { padding: 0 8px; }
+      .mode-button { gap: 3px; font-size: 9px; }
+      .mode-long { display: none; }
+      .mode-short { display: inline; }
     }
   </style>
 </head>
@@ -649,14 +689,20 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
           <path d="M4 20h16M6 20V9l5 3V8l7 3v9M9 16h1m4 0h1m-5-3h1m4 0h1"/>
         </svg>
-        <span>Power Plants Map</span>
+        <span class="mode-long">Power Plants Map</span><span class="mode-short">Plants</span>
       </button>
       <button class="mode-button" id="network-button" type="button" aria-pressed="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
           <circle cx="5" cy="6" r="2"/><circle cx="19" cy="7" r="2"/><circle cx="12" cy="18" r="2"/>
           <path d="m7 7 4 9m6-8-4 8M7 6.4l10-.1"/>
         </svg>
-        <span>Infrastructure Map</span>
+        <span class="mode-long">Infrastructure Map</span><span class="mode-short">Grid</span>
+      </button>
+      <button class="mode-button" id="nodal-button" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M4 19V5m0 14h16M7 15l4-5 3 2 5-7"/><circle cx="7" cy="15" r="1"/><circle cx="11" cy="10" r="1"/><circle cx="14" cy="12" r="1"/><circle cx="19" cy="5" r="1"/>
+        </svg>
+        <span class="mode-long">Nodal Price</span><span class="mode-short">Prices</span>
       </button>
     </nav>
 
@@ -724,6 +770,49 @@
           <button class="switch-row" id="offshore-toggle" type="button" role="switch" aria-checked="true">
             <span>Show Offshore Wind Cables</span><span class="switch" aria-hidden="true"></span>
           </button>
+        </section>
+      </div>
+      <div class="panel-view" id="nodal-panel" hidden>
+        <section class="panel-section">
+          <div class="panel-heading-row"><h2 class="panel-heading">Nodal Price</h2></div>
+          <div class="nodal-fields">
+            <label class="nodal-field" for="nodal-iso">ISO region
+              <select id="nodal-iso">
+                <option value="ALL">All</option>
+                <option value="CAISO">CAISO</option>
+                <option value="ERCOT">ERCOT</option>
+                <option value="MISO">MISO</option>
+                <option value="NYISO">NYISO</option>
+                <option value="PJM">PJM</option>
+                <option value="ISONE">ISO New England</option>
+                <option value="SPP">SPP</option>
+              </select>
+            </label>
+            <label class="nodal-field" for="nodal-date"><span id="nodal-date-label">Operating date (ISO local)</span>
+              <input id="nodal-date" type="date">
+            </label>
+            <label class="nodal-field" for="nodal-market">Market
+              <select id="nodal-market">
+                <option value="rt">Real-time</option>
+                <option value="da">Day-ahead</option>
+              </select>
+            </label>
+            <label class="nodal-field" for="nodal-aggregation">Price shown for each node
+              <select id="nodal-aggregation">
+                <option value="latest">Latest available interval</option>
+                <option value="average">Average for selected date</option>
+              </select>
+            </label>
+            <button class="nodal-refresh" id="nodal-refresh" type="button">Load nodal prices</button>
+            <button class="nodal-refresh" id="nodal-export" type="button" disabled>Export selected prices (CSV)</button>
+            <div class="nodal-status" id="nodal-status" role="status" aria-live="polite">Select an ISO and date to load nodal prices.</div>
+          </div>
+        </section>
+        <section class="panel-section price-legend">
+          <h2 class="panel-heading">Price intensity ($/MWh)</h2>
+          <div class="price-legend-gradient" aria-hidden="true"></div>
+          <div class="price-legend-values"><span id="price-min">—</span><span id="price-max">—</span></div>
+          <p class="nodal-note">Blue indicates lower or negative prices; red indicates higher prices. CSV exports also include price nodes without map coordinates.</p>
         </section>
       </div>
     </aside>
@@ -862,12 +951,13 @@
 
     // Bottom-to-top draw order; new layers are inserted below the next existing one.
     const LAYER_ORDER = [
-      "iso-regions", "tx-lines", "tx-lines-hit", "tx-lines-dc", "tx-lines-dc-hit",
+      "iso-regions", "nodal-prices", "tx-lines", "tx-lines-hit", "tx-lines-dc", "tx-lines-dc-hit",
       "hvdc-line", "offshore-cables", "offshore-cables-hit", "dc-substations", "substations", "power-plants"
     ];
     const MODE_LAYERS = {
       plants: ["iso-regions", "power-plants"],
-      network: ["tx-lines", "tx-lines-hit", "tx-lines-dc", "tx-lines-dc-hit", "hvdc-line", "offshore-cables", "offshore-cables-hit", "dc-substations", "substations"]
+      network: ["tx-lines", "tx-lines-hit", "tx-lines-dc", "tx-lines-dc-hit", "hvdc-line", "offshore-cables", "offshore-cables-hit", "dc-substations", "substations"],
+      nodal: ["iso-regions", "nodal-prices"]
     };
     const NETWORK_LAYER_IDS = new Set(MODE_LAYERS.network);
 
@@ -875,10 +965,12 @@
     const ui = {
       plantsButton: $("plants-button"),
       networkButton: $("network-button"),
+      nodalButton: $("nodal-button"),
       themeButton: $("theme-button"),
       error: $("map-error"),
       plantsPanel: $("plants-panel"),
       networkPanel: $("network-panel"),
+      nodalPanel: $("nodal-panel"),
       techFilters: $("tech-filters"),
       voltageFilters: $("voltage-filters"),
       capMin: $("cap-min"),
@@ -890,7 +982,16 @@
       offshoreToggle: $("offshore-toggle"),
       plantsReset: $("plants-reset"),
       plantStatusButtons: $("plant-status-buttons"),
-      networkReset: $("network-reset")
+      networkReset: $("network-reset"),
+      nodalIso: $("nodal-iso"),
+      nodalDate: $("nodal-date"),
+      nodalMarket: $("nodal-market"),
+      nodalAggregation: $("nodal-aggregation"),
+      nodalRefresh: $("nodal-refresh"),
+      nodalExport: $("nodal-export"),
+      nodalStatus: $("nodal-status"),
+      priceMin: $("price-min"),
+      priceMax: $("price-max")
     };
 
     const state = {
@@ -906,6 +1007,43 @@
       showSubs: true,
       showOffshore: true
     };
+    const nodalPriceState = {
+      iso: "CAISO",
+      market: "rt",
+      aggregation: "latest",
+      request: 0,
+      metadata: null,
+      records: []
+    };
+    const ISO_TIMEZONES = {
+      CAISO: "America/Los_Angeles",
+      ERCOT: "America/Chicago",
+      MISO: "America/Chicago",
+      NYISO: "America/New_York",
+      PJM: "America/New_York",
+      ISONE: "America/New_York",
+      SPP: "America/Chicago"
+    };
+    function isoToday(iso) {
+      const isos = iso === "ALL" ? Object.keys(ISO_TIMEZONES) : [iso];
+      return isos.map(region => {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: ISO_TIMEZONES[region],
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }).formatToParts(new Date());
+        const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+        return `${values.year}-${values.month}-${values.day}`;
+      }).sort()[0];
+    }
+    const todayValue = isoToday(ui.nodalIso.value);
+    ui.nodalDate.value = todayValue;
+    ui.nodalDate.max = todayValue;
+    $("nodal-date-label").textContent =
+      ui.nodalIso.value === "ALL"
+        ? "Operating date (local in each ISO)"
+        : "Operating date (ISO local)";
     document.documentElement.dataset.theme = state.theme;
 
     const map = new mapboxgl.Map({
@@ -1566,7 +1704,7 @@
         visible.delete("offshore-cables");
         visible.delete("offshore-cables-hit");
       }
-      [...MODE_LAYERS.plants, ...MODE_LAYERS.network].forEach(id => {
+      [...MODE_LAYERS.plants, ...MODE_LAYERS.network, ...MODE_LAYERS.nodal].forEach(id => {
         if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible.has(id) ? "visible" : "none");
       });
     }
@@ -1695,6 +1833,22 @@
           paint: { "line-color": dark ? "#6b7f8d" : "#9aa8b3", "line-width": 0.8, "line-opacity": 0.6, "line-dasharray": [3, 2] }
         });
       },
+      async nodalPrices(dark) {
+        addSource("nodal-prices", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] }
+        });
+        addLayerOrdered({
+          id: "nodal-prices", type: "circle", source: "nodal-prices",
+          paint: {
+            "circle-color": "#facc15",
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3.2, 7, 5.5, 12, 8],
+            "circle-opacity": 0.92,
+            "circle-stroke-color": dark ? "#101820" : "#ffffff",
+            "circle-stroke-width": 0.7
+          }
+        });
+      },
       async lines(dark) {
         addSource("tx-lines", { type: "geojson", data: await loadLines(), tolerance: 0.6, buffer: 32 });
         addLayerOrdered({
@@ -1791,7 +1945,8 @@
       hvdc: "hvdc-line",
       offshore: "offshore-cables",
       substations: "substations",
-      dcSubstations: "dc-substations"
+      dcSubstations: "dc-substations",
+      nodalPrices: "nodal-prices"
     };
 
     const layerBuildPromises = new Map();
@@ -1802,7 +1957,7 @@
       if (!layerBuildPromises.has(name)) {
         const promise = LAYER_BUILDERS[name](state.theme === "dark")
           .then(() => {
-            if (!NETWORK_LAYER_IDS.has(id) && state.mode === "plants") applyVisibility();
+            if (!NETWORK_LAYER_IDS.has(id) && state.mode !== "network") applyVisibility();
           })
           .catch(error => {
             layerBuildPromises.delete(name);
@@ -1842,11 +1997,240 @@
         .catch(showError);
     }
 
+    function formatPrice(value) {
+      return Number(value).toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function updateNodalPricePaint(metadata) {
+      if (!metadata || !map.getLayer("nodal-prices") ||
+          !Number.isFinite(Number(metadata.min_price)) ||
+          !Number.isFinite(Number(metadata.max_price))) return;
+      let minimum = Number(metadata.min_price);
+      let maximum = Number(metadata.max_price);
+      if (minimum === maximum) {
+        minimum -= 1;
+        maximum += 1;
+      }
+      map.setPaintProperty("nodal-prices", "circle-color", [
+        "interpolate", ["linear"], ["get", "price"],
+        minimum, "#2563eb",
+        (minimum + maximum) / 2, "#facc15",
+        maximum, "#dc2626"
+      ]);
+      ui.priceMin.textContent = `$${formatPrice(metadata.min_price)}`;
+      ui.priceMax.textContent = `$${formatPrice(metadata.max_price)}`;
+    }
+
+    async function fetchNodalPricesForIso(iso, day, market, aggregation) {
+      const params = new URLSearchParams({ iso, date: day, market, aggregation });
+      const response = await fetch(`/api/nodal-prices?${params}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error(
+            "The running map server does not have the /api/nodal-prices route. " +
+            "Restart the existing server from the dart-tool folder, then reload this page."
+          );
+        }
+        const message = (await response.text())
+          .replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+        if (/No (?:DA|RT) LMP data is available for .+ on \d{4}-\d{2}-\d{2}\./i.test(message)) {
+          throw new Error("Not available");
+        }
+        throw new Error(message || `${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    }
+
+    function combineAllNodalPrices(isoCodes, responses, market, day, aggregation) {
+      const loaded = [];
+      const failed = [];
+      responses.forEach((response, index) => {
+        const iso = isoCodes[index];
+        if (response.status === "fulfilled") {
+          loaded.push({ iso, result: response.value });
+        } else {
+          const error = response.reason?.message || String(response.reason);
+          failed.push({
+            iso,
+            error
+          });
+        }
+      });
+      if (!loaded.length) {
+        throw new Error(
+          `No ISO nodal prices could be loaded. ${failed.map(item =>
+            `${item.iso}: ${item.error}`).join("; ")}`
+        );
+      }
+
+      const features = loaded.flatMap(({ result }) => result.features || []);
+      const prices = loaded.flatMap(({ iso, result }) =>
+        (result.prices || []).map(record => ({ ...record, iso }))
+      );
+      const metadata = loaded.map(({ result }) => result.metadata || {});
+      const minimums = metadata
+        .map(row => row.min_price)
+        .filter(value => value != null && Number.isFinite(Number(value)))
+        .map(Number);
+      const maximums = metadata
+        .map(row => row.max_price)
+        .filter(value => value != null && Number.isFinite(Number(value)))
+        .map(Number);
+
+      return {
+        features,
+        prices,
+        metadata: {
+          iso: "ALL",
+          market,
+          date: day,
+          aggregation,
+          loaded_isos: loaded.map(({ iso }) => iso),
+          failed_isos: failed,
+          matched_nodes: features.length,
+          unmatched_nodes: metadata.reduce(
+            (total, row) => total + (Number(row.unmatched_nodes) || 0), 0
+          ),
+          min_price: minimums.length ? Math.min(...minimums) : null,
+          max_price: maximums.length ? Math.max(...maximums) : null
+        }
+      };
+    }
+
+    async function loadNodalPrices() {
+      if (state.mode !== "nodal") return;
+      const request = ++nodalPriceState.request;
+      const iso = ui.nodalIso.value;
+      const day = ui.nodalDate.value;
+      const market = ui.nodalMarket.value;
+      const aggregation = ui.nodalAggregation.value;
+      if (!day) {
+        ui.nodalStatus.textContent = "Choose an operating date.";
+        ui.nodalStatus.dataset.error = "true";
+        return;
+      }
+      Object.assign(nodalPriceState, { iso, market, aggregation });
+      const isoLabel = iso === "ALL" ? "all ISO regions" : iso;
+      ui.nodalStatus.textContent =
+        `Loading ${isoLabel} ${market === "rt" ? "real-time" : "day-ahead"} prices…`;
+      delete ui.nodalStatus.dataset.error;
+      nodalPriceState.records = [];
+      ui.nodalExport.disabled = true;
+      ui.priceMin.textContent = "—";
+      ui.priceMax.textContent = "—";
+      const source = map.getSource("nodal-prices");
+      if (source) source.setData({ type: "FeatureCollection", features: [] });
+      try {
+        await ensureLayer("nodalPrices");
+        let result;
+        if (iso === "ALL") {
+          const isoCodes = Object.keys(ISO_TIMEZONES);
+          const responses = await Promise.allSettled(
+            isoCodes.map(region => fetchNodalPricesForIso(
+              region, day, market, aggregation
+            ))
+          );
+          result = combineAllNodalPrices(
+            isoCodes, responses, market, day, aggregation
+          );
+        } else {
+          result = await fetchNodalPricesForIso(iso, day, market, aggregation);
+        }
+        if (request !== nodalPriceState.request || state.mode !== "nodal") return;
+        map.getSource("nodal-prices").setData({
+          type: "FeatureCollection",
+          features: result.features || []
+        });
+        nodalPriceState.metadata = result.metadata;
+        nodalPriceState.records = result.prices || [];
+        ui.nodalExport.disabled = nodalPriceState.records.length === 0;
+        updateNodalPricePaint(result.metadata);
+        if (iso === "ALL") {
+          const loaded = result.metadata.loaded_isos || [];
+          const failed = result.metadata.failed_isos || [];
+          const unavailable = failed
+            .filter(item => item.error === "Not available")
+            .map(item => item.iso);
+          const errors = failed.filter(item => item.error !== "Not available");
+          const unavailableSummary = unavailable.length
+            ? ` Not available for selected date: ${unavailable.join(", ")}.`
+            : "";
+          const errorSummary = errors.length
+            ? ` Could not load: ${errors.map(item => `${item.iso} (${item.error})`).join("; ")}.`
+            : "";
+          ui.nodalStatus.textContent =
+            `${loaded.length} of ${Object.keys(ISO_TIMEZONES).length} ISO regions loaded; ` +
+            `${result.metadata.matched_nodes} mapped nodes; ` +
+            `${result.metadata.unmatched_nodes} price nodes have no coordinates.` +
+            unavailableSummary + errorSummary;
+        } else if (result.metadata.matched_nodes) {
+          ui.nodalStatus.textContent =
+            `${result.metadata.matched_nodes} mapped nodes; ` +
+            `${result.metadata.unmatched_nodes} price nodes have no coordinates.`;
+        } else {
+          ui.nodalStatus.textContent =
+            `${nodalPriceState.records.length} prices loaded, but none have coordinates. ` +
+            "You can still export the selected data.";
+        }
+      } catch (error) {
+        if (request !== nodalPriceState.request) return;
+        nodalPriceState.records = [];
+        ui.nodalExport.disabled = true;
+        ui.nodalStatus.textContent = error.message || String(error);
+        ui.nodalStatus.dataset.error = "true";
+      }
+    }
+
+    function exportNodalPrices() {
+      if (!nodalPriceState.records.length) return;
+      const columns = [
+        "ISO", "Market", "Operating Date", "Aggregation", "Node ID", "Node",
+        "Zone", "LMP ($/MWh)", "Energy ($/MWh)", "Congestion ($/MWh)",
+        "Loss ($/MWh)", "Timestamp", "Intervals", "Longitude", "Latitude"
+      ];
+      const csvCell = value => {
+        const text = value == null ? "" : String(value);
+        const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+        return `"${safe.replaceAll('"', '""')}"`;
+      };
+      const rows = nodalPriceState.records.map(record => [
+        record.iso || nodalPriceState.iso,
+        nodalPriceState.market,
+        ui.nodalDate.value,
+        nodalPriceState.aggregation,
+        record.node_id,
+        record.node,
+        record.zone,
+        record.price,
+        record.energy,
+        record.congestion,
+        record.loss,
+        record.timestamp,
+        record.interval_count,
+        record.longitude,
+        record.latitude
+      ]);
+      const csv = [columns, ...rows].map(row => row.map(csvCell).join(",")).join("\r\n");
+      const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download =
+        `nodal-prices-${nodalPriceState.iso}-${ui.nodalDate.value}-` +
+        `${nodalPriceState.market}-${nodalPriceState.aggregation}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
     // Load large network datasets only when their layers are needed.
     function addDataLayers() {
       layerBuildPromises.clear();
       void Promise.all(["regions", "plants"].map(ensureLayer)).catch(showError);
       ensureNetworkLayers();
+      if (state.mode === "nodal") void loadNodalPrices();
     }
     let styleReady = false;
     map.on("style.load", () => {
@@ -1923,6 +2307,25 @@
       );
     });
 
+    map.on("click", "nodal-prices", e => {
+      const feature = e.features[0];
+      const properties = feature.properties;
+      openPopup(feature.geometry.coordinates, popupHtml(properties.name || properties.node_id, [
+        ["Node ID", properties.node_id],
+        ["Mapped substation", properties.mapped_station],
+        ["Zone", properties.zone],
+        ["LMP", `$${formatPrice(properties.price)} / MWh`],
+        ["Energy", properties.energy == null ? null : `$${formatPrice(properties.energy)} / MWh`],
+        ["Congestion", properties.congestion == null ? null : `$${formatPrice(properties.congestion)} / MWh`],
+        ["Loss", properties.loss == null ? null : `$${formatPrice(properties.loss)} / MWh`],
+        ["ISO", properties.price_iso],
+        ["Market", properties.price_market === "rt" ? "Real-time" : "Day-ahead"],
+        ["Operating date", properties.price_date],
+        ["Latest interval", properties.price_timestamp],
+        ["Intervals averaged", properties.interval_count]
+      ]));
+    });
+
     map.on("click", "offshore-cables-hit", e => {
       const p = e.features[0].properties;
       const length = Number(p.length_km);
@@ -1940,7 +2343,7 @@
       ]));
     });
 
-    ["tx-lines-hit", "tx-lines-dc-hit", "hvdc-line", "offshore-cables-hit", "substations", "dc-substations", "power-plants"].forEach(id => {
+    ["tx-lines-hit", "tx-lines-dc-hit", "hvdc-line", "offshore-cables-hit", "substations", "dc-substations", "power-plants", "nodal-prices"].forEach(id => {
       map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
     });
@@ -1950,11 +2353,18 @@
       state.mode = mode;
       ui.plantsButton.setAttribute("aria-pressed", String(mode === "plants"));
       ui.networkButton.setAttribute("aria-pressed", String(mode === "network"));
+      ui.nodalButton.setAttribute("aria-pressed", String(mode === "nodal"));
       ui.plantsPanel.hidden = mode !== "plants";
       ui.networkPanel.hidden = mode !== "network";
+      ui.nodalPanel.hidden = mode !== "nodal";
       if (mode === "network") {
-        hideLayers([...MODE_LAYERS.plants, ...MODE_LAYERS.network]);
+        networkLayerBatch += 1;
+        hideLayers([...MODE_LAYERS.plants, ...MODE_LAYERS.network, ...MODE_LAYERS.nodal]);
         ensureNetworkLayers();
+      } else if (mode === "nodal") {
+        networkLayerBatch += 1;
+        hideLayers([...MODE_LAYERS.plants, ...MODE_LAYERS.network, ...MODE_LAYERS.nodal]);
+        void loadNodalPrices();
       } else {
         networkLayerBatch += 1;
         applyVisibility();
@@ -1981,6 +2391,27 @@
     ui.offshoreToggle.addEventListener("click", () => setShowOffshore(!state.showOffshore));
     ui.plantsReset.addEventListener("click", resetPlants);
     ui.networkReset.addEventListener("click", resetNetwork);
+    ui.nodalButton.addEventListener("click", () => switchMode("nodal"));
+    ui.plantsButton.addEventListener("click", () => switchMode("plants"));
+    ui.networkButton.addEventListener("click", () => switchMode("network"));
+    ui.nodalIso.addEventListener("change", () => {
+      const dateWasCurrent = ui.nodalDate.value === ui.nodalDate.max;
+      const todayForIso = isoToday(ui.nodalIso.value);
+      ui.nodalDate.max = todayForIso;
+      if (dateWasCurrent) ui.nodalDate.value = todayForIso;
+      $("nodal-date-label").textContent =
+        ui.nodalIso.value === "ALL"
+          ? "Operating date (local in each ISO)"
+          : "Operating date (ISO local)";
+      if (state.mode === "nodal") void loadNodalPrices();
+    });
+    [ui.nodalDate, ui.nodalMarket, ui.nodalAggregation].forEach(control => {
+      control.addEventListener("change", () => {
+        if (state.mode === "nodal") void loadNodalPrices();
+      });
+    });
+    ui.nodalRefresh.addEventListener("click", () => void loadNodalPrices());
+    ui.nodalExport.addEventListener("click", exportNodalPrices);
     const aboutOverlay = $("about-overlay");
     const aboutButton = $("about-button");
     function setAboutOpen(open) {
@@ -1992,8 +2423,6 @@
     aboutOverlay.addEventListener("click", event => { if (event.target === aboutOverlay) setAboutOpen(false); });
     document.addEventListener("keydown", event => { if (event.key === "Escape" && !aboutOverlay.hidden) setAboutOpen(false); });
 
-    ui.plantsButton.addEventListener("click", () => switchMode("plants"));
-    ui.networkButton.addEventListener("click", () => switchMode("network"));
     ui.themeButton.addEventListener("click", () => {
       state.theme = state.theme === "dark" ? "light" : "dark";
       document.documentElement.dataset.theme = state.theme;

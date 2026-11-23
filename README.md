@@ -3,13 +3,23 @@
 Run the interactive U.S. power infrastructure map from the repository root:
 
 ```powershell
+python -m pip install -r requirements.txt
 python src\dart_tool\map.py
 ```
 
 The map opens in your browser at <http://127.0.0.1:8765/> and serves its data
-locally. Use the navigation buttons to switch between **Power Plants Map** and
-**Infrastructure Map**. The theme control on the right switches between light
-and dark map styles.
+locally. Use the navigation buttons to switch between **Power Plants Map**,
+**Infrastructure Map**, and **Nodal Price**. The theme control on the right
+switches between light and dark map styles.
+
+The Nodal Price tab retrieves day-ahead and real-time node prices with the
+open-source [GridStatus Python library](https://github.com/gridstatus/gridstatus).
+PJM price requests require a PJM Data Miner API key in the `PJM_API_KEY`
+environment variable; the other supported ISO adapters use public data feeds.
+The map uses GridStatus' ERCOT bus-to-substation directory and matches station
+names against the local substation coordinate data. It plots only unique,
+normalized-name matches within the ISO footprint. Unmatched prices remain
+available in the CSV export rather than being assigned guessed locations.
 
 The panel in the top-left corner is the legend and filter for the active tab:
 
@@ -25,6 +35,19 @@ The panel in the top-left corner is the legend and filter for the active tab:
   are drawn as dashed lines colored by voltage class; **Show Offshore Wind
   Cables** toggles them. DC cables, and cables proposed as AC and/or DC, also
   appear when only **DC** is selected.
+- **Nodal Price**: select an available ISO (CAISO, ERCOT, MISO, NYISO, PJM,
+  ISO-NE, or SPP) or **All** to show every region together, plus an operating
+  date, day-ahead or real-time market, and latest interval or daily-average
+  price. For **All**, the selected date is interpreted in each ISO's local
+  timezone; regions with unavailable data are reported while available regions
+  remain visible. For PJM, set the Data Miner key before starting the server:
+
+  ```powershell
+  $env:PJM_API_KEY = "<your PJM Data Miner key>"
+  python src\dart_tool\map.py
+  ```
+
+  Use **Export selected prices (CSV)** to download matched and unmatched prices.
 
 Click **Reset** next to a panel title to restore that tab's filters to their
 defaults. It is greyed out when nothing is filtered.
