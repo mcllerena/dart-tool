@@ -15,11 +15,47 @@ switches between light and dark map styles.
 The Nodal Price tab retrieves day-ahead and real-time node prices with the
 open-source [GridStatus Python library](https://github.com/gridstatus/gridstatus).
 PJM price requests require a PJM Data Miner API key in the `PJM_API_KEY`
-environment variable; the other supported ISO adapters use public data feeds.
-The map uses GridStatus' ERCOT bus-to-substation directory and matches station
-names against the local substation coordinate data. It plots only unique,
-normalized-name matches within the ISO footprint. Unmatched prices remain
-available in the CSV export rather than being assigned guessed locations.
+environment variable; the other supported ISO adapters use public data feeds. For ERCOT,
+the map uses GridStatus' bus-to-substation directory. For CAISO, it derives a
+station name only from network-node IDs ending in the voltage/node pattern
+`_<voltage>_N<number>`. These station names, and other ISO node names, are
+matched against the local substation coordinate data. CAISO matching uses the
+combined CAISO and NorthernGrid polygon footprints; other ISOs use their
+respective state footprints. Only exact normalized names with one coordinate
+inside the applicable footprint are plotted. Unmatched prices remain available
+in the CSV export rather than being assigned guessed locations. ISO-NE station
+names are parsed from network-node names and their voltage suffixes; SPP station
+names are extracted from bus identifiers. These parsers still require an exact,
+unique coordinate match.
+
+MISO price nodes include generator nodes, hubs, load zones, and interfaces. The
+map only assigns approximate locations to `Gennode` entries, ranking parsed
+node-name fragments against existing power-plant names and substation names,
+cities, and counties. Candidates must be in MISO states and inside the MISO
+boundary; ties are left unmapped. Approximate locations are identified in the
+status, marker popup, and CSV export. Hubs, load zones, and interfaces remain
+unmapped because they do not represent individual substations.
+
+NYISO generator nodes use parsed unit/equipment suffixes and exact or
+high-similarity plant/substation aliases, limited to New York coordinates inside
+the NYISO footprint. Ambiguous candidates are left unmapped, and heuristic
+locations are identified in the status, marker popup, and CSV export. Aggregate
+zones and reference buses are not fuzzy-mapped.
+
+The nodal panel defaults its operating date and five-minute time slider to the
+browser's local time zone. Use the time-zone dropdown to choose another U.S.
+time zone; the selected instant is converted to each ISO's local date and time
+before requesting prices. Adjacent buttons step backward or forward by five
+minutes, and the current-interval button returns to the present. Changes to the
+ISO, product, date, time, and time-zone controls load automatically. For a
+selected time, the map shows each node's latest
+interval at or before that time; real-time requests retrieve only the selected
+five-minute window, while day-ahead requests retrieve the corresponding hour.
+Marker popups and CSV exports distinguish the requested time from each node's
+actual price-interval timestamp. The product dropdown offers LMP, energy,
+congestion, loss, and DART (day-ahead minus real-time) values. Daily averages
+use the whole operating date. Select multiple ISO checkboxes to compare
+regions, or use **Only [+]** to show one ISO at a time.
 
 The panel in the top-left corner is the legend and filter for the active tab:
 

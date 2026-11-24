@@ -17,7 +17,8 @@ import time
 import webbrowser
 import xml.etree.ElementTree as ET
 import zipfile
-from datetime import date
+from datetime import date, datetime
+from datetime import time as datetime_time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -451,7 +452,7 @@ class MapRepository:
         self.data_dir = data_dir
         self._point_cache: dict[str, dict[str, Any]] = {}
         self._nodal_price_cache: dict[
-            tuple[str, str, str, str], tuple[float, dict[str, Any]]
+            tuple[str, str, str, str, str], tuple[float, dict[str, Any]]
         ] = {}
 
     def points(self, layer_name: str) -> dict[str, Any]:
@@ -468,14 +469,58 @@ class MapRepository:
         return self._point_cache[layer_name]
 
     def nodal_prices(
-        self, iso: str, day: date, market: str, aggregation: str
+        self,
+        iso: str,
+        day: date,
+        product: str,
+        aggregation: str,
+        local_time: datetime_time | None = None,
     ) -> dict[str, Any]:
-        key = (iso, day.isoformat(), market, aggregation)
+        product = {"rt": "rt_lmp", "da": "da_lmp"}.get(product, product)
+        key = (
+            iso,
+            day.isoformat(),
+            product,
+            aggregation,
+            local_time.isoformat() if local_time else "",
+        )
         cached = self._nodal_price_cache.get(key)
         if cached and time.monotonic() - cached[0] < 120:
             return cached[1]
-        fetch_nodal_price_geojson = _nodal_price_module().fetch_nodal_price_geojson
-        result = fetch_nodal_price_geojson(iso, day, market, aggregation)
+        nodal_prices = _nodal_price_module()
+        details = nodal_prices.PRICE_PRODUCT_DETAILS.get(product)
+        base_results = {}
+        if details:
+            market, _ = details
+            base_markets = ("da", "rt") if market == "dart" else (market,)
+            for base_market in base_markets:
+                base_key = (
+                    iso,
+                    day.isoformat(),
+                    base_market,
+                    aggregation,
+                    local_time.isoformat() if local_time else "",
+                )
+                cached_base = self._nodal_price_cache.get(base_key)
+                if cached_base and time.monotonic() - cached_base[0] < 120:
+                    base_results[base_market] = cached_base[1]
+                else:
+                    base_result = nodal_prices.fetch_nodal_price_geojson(
+                        iso, day, base_market, aggregation, local_time
+                    )
+                    self._nodal_price_cache[base_key] = (
+                        time.monotonic(),
+                        base_result,
+                    )
+                    base_results[base_market] = base_result
+        result = nodal_prices.fetch_nodal_price_product_geojson(
+            iso,
+            day,
+            product,
+            aggregation,
+            local_time,
+            base_results=base_results,
+        )
         self._nodal_price_cache[key] = (time.monotonic(), result)
         return result
 
@@ -776,12 +821,21 @@ class MapRequestHandler(BaseHTTPRequestHandler):
         elif request.path == "/api/nodal-prices":
             query = parse_qs(request.query, keep_blank_values=True)
             iso = query.get("iso", [""])[0].upper()
-            market = query.get("market", ["rt"])[0].lower()
+            product = query.get("product", [""])[0].lower()
+            if not product:
+                market = query.get("market", ["rt"])[0].lower()
+                product = f"{market}_lmp"
             aggregation = query.get("aggregation", ["latest"])[0].lower()
             try:
                 day = date.fromisoformat(query.get("date", [""])[0])
+                local_time_value = query.get("time", [""])[0]
+                local_time = (
+                    datetime.strptime(local_time_value, "%H:%M").time()
+                    if local_time_value
+                    else None
+                )
                 result = self.server.repository.nodal_prices(
-                    iso, day, market, aggregation
+                    iso, day, product, aggregation, local_time
                 )
             except ValueError as error:
                 self.send_error(400, str(error))

@@ -275,6 +275,7 @@
       backdrop-filter: blur(8px);
       font-size: 13px;
     }
+    .control-panel.control-panel--nodal { width: 380px; }
 
     .panel-view[hidden] { display: none; }
     .panel-section + .panel-section {
@@ -370,6 +371,7 @@
     .plant-status-button-wide { grid-column: 1 / -1; justify-self: center; width: 70%; }
     .plant-status-button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
     .region-group-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .nodal-iso-selector .region-group-buttons { grid-template-columns: 1fr; }
     .region-group-toggle {
       display: flex;
       align-items: center;
@@ -433,8 +435,9 @@
     .region-option input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
     .nodal-fields { display: grid; gap: 10px; }
     .nodal-field { display: grid; gap: 4px; color: var(--muted); font-size: 11px; font-weight: 650; }
+    .nodal-iso-options { display: grid; gap: 1px; }
     .nodal-field select,
-    .nodal-field input {
+    .nodal-field input:not([type="checkbox"]):not([type="range"]) {
       width: 100%;
       min-height: 34px;
       padding: 6px 8px;
@@ -460,12 +463,22 @@
     .nodal-status { min-height: 2.4em; color: var(--muted); font-size: 11px; line-height: 1.4; }
     .nodal-status[data-error="true"] { color: #dc2626; }
     .price-legend { display: grid; gap: 5px; font-size: 11px; }
-    .price-legend-gradient {
-      height: 10px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #2563eb 0%, #facc15 50%, #dc2626 100%);
+    .price-legend-bar { height: 12px; border: 1px solid rgba(30, 45, 55, .16); border-radius: 4px; }
+    .price-legend-ticks { position: relative; height: 27px; margin: 0 1px; }
+    .price-legend-tick {
+      position: absolute;
+      top: 0;
+      display: grid;
+      justify-items: center;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.1;
+      white-space: nowrap;
+      transform: translateX(-50%);
     }
-    .price-legend-values { display: flex; justify-content: space-between; color: var(--muted); }
+    .price-legend-tick::before { width: 2px; height: 7px; background: var(--muted); content: ""; }
+    .price-legend-tick.edge-start { transform: none; justify-items: start; }
+    .price-legend-tick.edge-end { transform: translateX(-100%); justify-items: end; }
     .nodal-note { color: var(--muted); font-size: 10px; line-height: 1.4; }
     .swatch-dot {
       width: 13px;
@@ -537,6 +550,95 @@
       cursor: grab;
       pointer-events: auto;
     }
+    .nodal-time-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+    }
+    .nodal-time-caption { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .nodal-time-controls { display: flex; align-items: center; gap: 3px; }
+    .nodal-timezone-wrap { position: relative; }
+    .nodal-timezone-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 23px;
+      padding: 0 6px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--surface-border);
+      border-radius: 6px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 9px;
+      font-weight: 750;
+    }
+    .nodal-timezone-toggle:hover,
+    .nodal-timezone-toggle[aria-expanded="true"] { border-color: var(--accent); }
+    .nodal-timezone-menu {
+      position: absolute;
+      z-index: 20;
+      top: calc(100% + 5px);
+      left: 0;
+      display: grid;
+      min-width: 158px;
+      max-height: 250px;
+      padding: 4px;
+      overflow-y: auto;
+      background: var(--surface-strong);
+      border: 1px solid var(--surface-border);
+      border-radius: 9px;
+      box-shadow: var(--shadow);
+    }
+    .nodal-timezone-menu[hidden] { display: none; }
+    .nodal-timezone-option {
+      padding: 7px 8px;
+      color: var(--ink);
+      background: transparent;
+      border: 0;
+      border-radius: 5px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 10px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .nodal-timezone-option:hover,
+    .nodal-timezone-option[aria-checked="true"] { color: var(--accent); background: var(--accent-soft); }
+    .nodal-time-heading output {
+      min-width: 40px;
+      color: var(--ink);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+    }
+    .nodal-time-step {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      line-height: 1;
+    }
+    .nodal-time-step:hover:not(:disabled) {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-color: var(--surface-border);
+    }
+    .nodal-time-step:disabled { opacity: .35; cursor: not-allowed; }
+    .nodal-time-range { margin: 0 8px; }
+    .nodal-time-range input[type="range"] { pointer-events: auto; }
+    .nodal-time-range input[type="range"]:disabled { opacity: .45; cursor: not-allowed; }
+    .nodal-time-scale { margin-top: 0; font-size: 9px; }
     .range-scale {
       display: flex;
       justify-content: space-between;
@@ -628,6 +730,37 @@
     .popup-label { color: var(--muted); }
     .popup-value { max-width: 140px; color: var(--ink); font-weight: 620; overflow-wrap: anywhere; text-align: right; }
 
+    .nodal-hover-popup { pointer-events: none; }
+    .nodal-hover-popup .mapboxgl-popup-content {
+      width: max-content;
+      max-width: calc(100vw - 32px);
+      max-height: none;
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid var(--surface-border);
+      border-radius: 14px;
+      background: var(--surface-strong);
+      box-shadow: var(--shadow);
+    }
+    .nodal-hover-popup .mapboxgl-popup-tip { display: none; }
+    .nodal-price-card { width: max-content; max-width: calc(100vw - 56px); padding: 8px 10px 9px; line-height: 1.2; }
+    .nodal-card-title { color: var(--ink); font-size: 13px; font-weight: 760; line-height: 1.2; overflow-wrap: anywhere; text-align: center; }
+    .nodal-card-time { margin: 2px 0 7px; color: var(--muted); font-size: 10px; line-height: 1.2; text-align: center; }
+    .nodal-card-mapping { margin: -2px 0 6px; color: var(--muted); font-size: 9px; line-height: 1.2; text-align: center; }
+    .nodal-card-grid {
+      display: grid;
+      grid-template-columns: repeat(4, max-content);
+      align-items: center;
+      justify-content: center;
+      column-gap: 12px;
+      padding-top: 6px;
+      border-top: 1px solid var(--surface-border);
+    }
+    .nodal-card-metric { display: grid; justify-items: center; gap: 2px; text-align: center; }
+    .nodal-card-label { color: var(--muted); font-size: 9px; font-weight: 650; line-height: 1.2; white-space: nowrap; }
+    .nodal-card-value { color: var(--ink); font-size: 12px; font-weight: 740; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .nodal-card-value.is-missing { color: var(--muted); font-weight: 560; }
+
     .mapboxgl-ctrl-logo { display: none !important; }
     .mapboxgl-ctrl-attrib.mapboxgl-compact { background: var(--surface-strong); }
 
@@ -649,6 +782,7 @@
       main { inset-block-start: 54px; }
       .map-error { top: 14px; max-width: calc(100vw - 24px); }
       .control-panel { top: 12px; left: 12px; width: 220px; padding: 12px 10px 14px; font-size: 12px; }
+      .control-panel.control-panel--nodal { width: min(360px, calc(100vw - 24px)); }
       .filter-item { padding: 5px 6px; font-size: 12px; }
     }
 
@@ -776,25 +910,100 @@
         <section class="panel-section">
           <div class="panel-heading-row"><h2 class="panel-heading">Nodal Price</h2></div>
           <div class="nodal-fields">
-            <label class="nodal-field" for="nodal-iso">ISO region
-              <select id="nodal-iso">
-                <option value="ALL">All</option>
-                <option value="CAISO">CAISO</option>
-                <option value="ERCOT">ERCOT</option>
-                <option value="MISO">MISO</option>
-                <option value="NYISO">NYISO</option>
-                <option value="PJM">PJM</option>
-                <option value="ISONE">ISO New England</option>
-                <option value="SPP">SPP</option>
-              </select>
-            </label>
-            <label class="nodal-field" for="nodal-date"><span id="nodal-date-label">Operating date (ISO local)</span>
+            <div class="nodal-field">ISO regions
+              <div class="region-selector nodal-iso-selector">
+                <div class="region-group-buttons">
+                  <button class="region-group-toggle nodal-iso-toggle" id="nodal-iso-toggle" type="button" aria-expanded="false" aria-controls="nodal-iso-options">
+                    ISO Regions<span class="region-chevron" aria-hidden="true"></span>
+                  </button>
+                </div>
+                <div class="region-options nodal-iso-options" id="nodal-iso-options" role="group" aria-label="ISO regions" hidden>
+                  <label class="region-option"><input type="checkbox" data-nodal-iso="ALL"><span>All ISO regions</span></label>
+                  <div class="region-option-row">
+                    <label class="region-option"><input type="checkbox" data-nodal-iso="CAISO" checked><span>CAISO</span></label>
+                    <button class="only-button" type="button" data-only-nodal-iso="CAISO" aria-label="Show only CAISO">Only [+]</button>
+                  </div>
+                  <div class="region-option-row">
+                    <label class="region-option"><input type="checkbox" data-nodal-iso="ERCOT"><span>ERCOT</span></label>
+                    <button class="only-button" type="button" data-only-nodal-iso="ERCOT" aria-label="Show only ERCOT">Only [+]</button>
+                  </div>
+                  <div class="region-option-row">
+                    <label class="region-option"><input type="checkbox" data-nodal-iso="MISO"><span>MISO</span></label>
+                    <button class="only-button" type="button" data-only-nodal-iso="MISO" aria-label="Show only MISO">Only [+]</button>
+                  </div>
+                  <div class="region-option-row">
+                    <label class="region-option"><input type="checkbox" data-nodal-iso="NYISO"><span>NYISO</span></label>
+                    <button class="only-button" type="button" data-only-nodal-iso="NYISO" aria-label="Show only NYISO">Only [+]</button>
+                  </div>
+                  <div class="region-option-row">
+                    <label class="region-option"><input type="checkbox" data-nodal-iso="PJM"><span>PJM</span></label>
+                    <button class="only-button" type="button" data-only-nodal-iso="PJM" aria-label="Show only PJM">Only [+]</button>
+                  </div>
+                  <div class="region-option-row">
+                    <label class="region-option"><input type="checkbox" data-nodal-iso="ISONE"><span>ISO New England</span></label>
+                    <button class="only-button" type="button" data-only-nodal-iso="ISONE" aria-label="Show only ISO New England">Only [+]</button>
+                  </div>
+                  <div class="region-option-row">
+                    <label class="region-option"><input type="checkbox" data-nodal-iso="SPP"><span>SPP</span></label>
+                    <button class="only-button" type="button" data-only-nodal-iso="SPP" aria-label="Show only SPP">Only [+]</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <label class="nodal-field" for="nodal-date"><span id="nodal-date-label">Operating date (local time)</span>
               <input id="nodal-date" type="date">
             </label>
-            <label class="nodal-field" for="nodal-market">Market
-              <select id="nodal-market">
-                <option value="rt">Real-time</option>
-                <option value="da">Day-ahead</option>
+            <div class="nodal-field">
+              <div class="nodal-time-heading">
+                <div class="nodal-time-caption">
+                  <span>Price time</span>
+                  <div class="nodal-timezone-wrap" id="nodal-timezone-wrap">
+                    <button class="nodal-timezone-toggle" id="nodal-timezone-toggle" type="button" aria-haspopup="menu" aria-expanded="false">
+                      <span id="nodal-timezone-label">Local</span><span aria-hidden="true">▾</span>
+                    </button>
+                    <div class="nodal-timezone-menu" id="nodal-timezone-menu" role="menu" aria-label="Price time zone" hidden></div>
+                  </div>
+                </div>
+                <div class="nodal-time-controls">
+                  <button class="nodal-time-step" id="nodal-time-prev" type="button" aria-label="Previous five minutes">◀</button>
+                  <output id="nodal-time-label" for="nodal-time">00:00</output>
+                  <button class="nodal-time-step" id="nodal-time-next" type="button" aria-label="Next five minutes">▶</button>
+                  <button class="nodal-time-step" id="nodal-time-now" type="button" aria-label="Go back to the current interval" title="Go back to the current interval">
+                    <svg aria-hidden="true" viewBox="0 0 16 16" width="13" height="13" fill="none">
+                      <path d="M13.2 6A5.5 5.5 0 1 0 13.5 8M13.2 6V2.8M13.2 6H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M8 4.7V8l2.1 1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="dual-range nodal-time-range">
+                <div class="dual-range-track"></div>
+                <input id="nodal-time" type="range" min="0" max="1435" step="5" value="0" aria-label="Price time in selected time zone">
+              </div>
+              <div class="range-scale nodal-time-scale" aria-hidden="true">
+                <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:55</span>
+              </div>
+            </div>
+            <label class="nodal-field" for="nodal-product">Market
+              <select id="nodal-product">
+                <optgroup label="Real Time">
+                  <option value="rt_lmp">Real Time LMP ($/MWh)</option>
+                  <option value="rt_congestion">Real Time Congestion ($/MWh)</option>
+                  <option value="rt_loss">Real Time Loss ($/MWh)</option>
+                  <option value="rt_energy">Real Time Energy ($/MWh)</option>
+                </optgroup>
+                <optgroup label="Day Ahead">
+                  <option value="da_lmp">Day Ahead LMP ($/MWh)</option>
+                  <option value="da_congestion">Day Ahead Congestion ($/MWh)</option>
+                  <option value="da_loss">Day Ahead Loss ($/MWh)</option>
+                  <option value="da_energy">Day Ahead Energy ($/MWh)</option>
+                </optgroup>
+                <optgroup label="DART (Day Ahead - Real Time)">
+                  <option value="dart_lmp">DART LMP ($/MWh)</option>
+                  <option value="dart_congestion">DART Congestion ($/MWh)</option>
+                  <option value="dart_loss">DART Loss ($/MWh)</option>
+                  <option value="dart_energy">DART Energy ($/MWh)</option>
+                </optgroup>
               </select>
             </label>
             <label class="nodal-field" for="nodal-aggregation">Price shown for each node
@@ -803,16 +1012,14 @@
                 <option value="average">Average for selected date</option>
               </select>
             </label>
-            <button class="nodal-refresh" id="nodal-refresh" type="button">Load nodal prices</button>
             <button class="nodal-refresh" id="nodal-export" type="button" disabled>Export selected prices (CSV)</button>
             <div class="nodal-status" id="nodal-status" role="status" aria-live="polite">Select an ISO and date to load nodal prices.</div>
           </div>
         </section>
         <section class="panel-section price-legend">
           <h2 class="panel-heading">Price intensity ($/MWh)</h2>
-          <div class="price-legend-gradient" aria-hidden="true"></div>
-          <div class="price-legend-values"><span id="price-min">—</span><span id="price-max">—</span></div>
-          <p class="nodal-note">Blue indicates lower or negative prices; red indicates higher prices. CSV exports also include price nodes without map coordinates.</p>
+          <div class="price-legend-bar" id="price-legend-bar" role="img" aria-label="Discrete coolwarm price scale"></div>
+          <div class="price-legend-ticks" id="price-legend-ticks" aria-hidden="true"></div>
         </section>
       </div>
     </aside>
@@ -983,15 +1190,24 @@
       plantsReset: $("plants-reset"),
       plantStatusButtons: $("plant-status-buttons"),
       networkReset: $("network-reset"),
-      nodalIso: $("nodal-iso"),
+      nodalIsoToggle: $("nodal-iso-toggle"),
+      nodalIsoOptions: $("nodal-iso-options"),
       nodalDate: $("nodal-date"),
-      nodalMarket: $("nodal-market"),
+      nodalTime: $("nodal-time"),
+      nodalTimeLabel: $("nodal-time-label"),
+      nodalTimePrev: $("nodal-time-prev"),
+      nodalTimeNext: $("nodal-time-next"),
+      nodalTimeNow: $("nodal-time-now"),
+      nodalTimezoneWrap: $("nodal-timezone-wrap"),
+      nodalTimezoneToggle: $("nodal-timezone-toggle"),
+      nodalTimezoneLabel: $("nodal-timezone-label"),
+      nodalTimezoneMenu: $("nodal-timezone-menu"),
+      nodalProduct: $("nodal-product"),
       nodalAggregation: $("nodal-aggregation"),
-      nodalRefresh: $("nodal-refresh"),
       nodalExport: $("nodal-export"),
       nodalStatus: $("nodal-status"),
-      priceMin: $("price-min"),
-      priceMax: $("price-max")
+      priceLegendBar: $("price-legend-bar"),
+      priceLegendTicks: $("price-legend-ticks")
     };
 
     const state = {
@@ -1007,10 +1223,13 @@
       showSubs: true,
       showOffshore: true
     };
+    const LOCAL_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     const nodalPriceState = {
-      iso: "CAISO",
-      market: "rt",
+      isoCodes: ["CAISO"],
+      product: "rt_lmp",
       aggregation: "latest",
+      localTime: "",
+      timeZone: LOCAL_TIME_ZONE,
       request: 0,
       metadata: null,
       records: []
@@ -1024,26 +1243,250 @@
       ISONE: "America/New_York",
       SPP: "America/Chicago"
     };
-    function isoToday(iso) {
-      const isos = iso === "ALL" ? Object.keys(ISO_TIMEZONES) : [iso];
-      return isos.map(region => {
-        const parts = new Intl.DateTimeFormat("en-US", {
-          timeZone: ISO_TIMEZONES[region],
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit"
-        }).formatToParts(new Date());
-        const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
-        return `${values.year}-${values.month}-${values.day}`;
-      }).sort()[0];
+    const NODAL_TIME_ZONES = [
+      { id: LOCAL_TIME_ZONE, label: "Local" },
+      { id: "America/Los_Angeles", label: "Pacific" },
+      { id: "America/Denver", label: "Mountain" },
+      { id: "America/Phoenix", label: "Arizona" },
+      { id: "America/Chicago", label: "Central" },
+      { id: "America/New_York", label: "Eastern" },
+      { id: "America/Anchorage", label: "Alaska" },
+      { id: "Pacific/Honolulu", label: "Hawaii" }
+    ].filter((zone, index, zones) =>
+      zones.findIndex(candidate => candidate.id === zone.id) === index
+    );
+    const ISO_CODES = Object.keys(ISO_TIMEZONES);
+    const PRICE_PRODUCT_LABELS = {
+      rt_lmp: "Real Time LMP ($/MWh)",
+      rt_congestion: "Real Time Congestion ($/MWh)",
+      rt_loss: "Real Time Loss ($/MWh)",
+      rt_energy: "Real Time Energy ($/MWh)",
+      da_lmp: "Day Ahead LMP ($/MWh)",
+      da_congestion: "Day Ahead Congestion ($/MWh)",
+      da_loss: "Day Ahead Loss ($/MWh)",
+      da_energy: "Day Ahead Energy ($/MWh)",
+      dart_lmp: "DART LMP ($/MWh)",
+      dart_congestion: "DART Congestion ($/MWh)",
+      dart_loss: "DART Loss ($/MWh)",
+      dart_energy: "DART Energy ($/MWh)"
+    };
+    const NODAL_PRICE_BANDS = [
+      { operator: "<", threshold: -40, color: "#3B4CC0" },
+      { operator: "<", threshold: -20, color: "#688AEE" },
+      { operator: "<", threshold: 0, color: "#9BBDF3" },
+      { operator: "<", threshold: 25, color: "#C9D7EE" },
+      { operator: "<", threshold: 50, color: "#E6D8C6" },
+      { operator: "<", threshold: 100, color: "#F2CBB7" },
+      { operator: "<", threshold: 175, color: "#F49A7A" },
+      { operator: "<=", threshold: 225, color: "#E26952" },
+      { color: "#B40426" }
+    ];
+
+    function renderNodalPriceScale() {
+      const segmentStops = NODAL_PRICE_BANDS.flatMap((band, index) => {
+        const start = index / NODAL_PRICE_BANDS.length * 100;
+        const end = (index + 1) / NODAL_PRICE_BANDS.length * 100;
+        return [`${band.color} ${start}%`, `${band.color} ${end}%`];
+      });
+      ui.priceLegendBar.style.background =
+        `linear-gradient(90deg, ${segmentStops.join(", ")})`;
+
+      const ticks = [
+        ["< -40", 0, "edge-start"],
+        ["-40", 100 / 9],
+        ["-20", 200 / 9],
+        ["0", 300 / 9],
+        ["25", 400 / 9],
+        ["50", 500 / 9],
+        ["100", 600 / 9],
+        ["175", 700 / 9],
+        ["225", 800 / 9],
+        [">225", 100, "edge-end"]
+      ];
+      for (const [label, position, edge] of ticks) {
+        const tick = document.createElement("span");
+        tick.className = `price-legend-tick${edge ? ` ${edge}` : ""}`;
+        tick.style.left = `${position}%`;
+        tick.textContent = label;
+        ui.priceLegendTicks.append(tick);
+      }
     }
-    const todayValue = isoToday(ui.nodalIso.value);
-    ui.nodalDate.value = todayValue;
-    ui.nodalDate.max = todayValue;
-    $("nodal-date-label").textContent =
-      ui.nodalIso.value === "ALL"
-        ? "Operating date (local in each ISO)"
-        : "Operating date (ISO local)";
+    renderNodalPriceScale();
+    function selectedNodalIsos() {
+      return [...ui.nodalIsoOptions.querySelectorAll(
+        "input[data-nodal-iso]:checked"
+      )]
+        .map(input => input.dataset.nodalIso)
+        .filter(iso => iso !== "ALL");
+    }
+    function formatNodalTime(value) {
+      const minutes = Number(value);
+      const hours = Math.floor(minutes / 60);
+      const minute = minutes % 60;
+      return `${String(hours).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    }
+    function dateTimePartsInZone(instant, timeZone) {
+      return Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      }).formatToParts(instant).map(({ type, value }) => [type, value]));
+    }
+    function dateStringFromParts(parts) {
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    }
+    function dateStringInZone(instant, timeZone) {
+      return dateStringFromParts(dateTimePartsInZone(instant, timeZone));
+    }
+    function timeZoneAbbreviation(instant, timeZone) {
+      return new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        timeZoneName: "short"
+      }).formatToParts(instant).find(part => part.type === "timeZoneName").value;
+    }
+    function localDateTimeToInstant(day, minutes, timeZone) {
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+      if (!match || !Number.isInteger(minutes) || minutes < 0 || minutes > 1439) {
+        throw new Error("Choose a valid local operating date and time.");
+      }
+      const [, year, month, date] = match.map(Number);
+      const hour = Math.floor(minutes / 60);
+      const minute = minutes % 60;
+      const desiredWallTime = Date.UTC(year, month - 1, date, hour, minute);
+      let candidate = desiredWallTime;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const parts = dateTimePartsInZone(new Date(candidate), timeZone);
+        const representedWallTime = Date.UTC(
+          Number(parts.year),
+          Number(parts.month) - 1,
+          Number(parts.day),
+          Number(parts.hour),
+          Number(parts.minute)
+        );
+        const correction = desiredWallTime - representedWallTime;
+        if (correction === 0) return new Date(candidate);
+        candidate += correction;
+      }
+      throw new Error(
+        `${formatNodalTime(minutes)} does not occur in ${timeZone} on ${day} ` +
+        "because of a daylight-saving time change."
+      );
+    }
+    function localTimeForIso(instant, iso) {
+      const parts = dateTimePartsInZone(instant, ISO_TIMEZONES[iso]);
+      return {
+        day: dateStringFromParts(parts),
+        time: `${parts.hour}:${parts.minute}`
+      };
+    }
+    function renderNodalTimeZoneMenu() {
+      for (const zone of NODAL_TIME_ZONES) {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "nodal-timezone-option";
+        option.setAttribute("role", "menuitemradio");
+        option.dataset.timeZone = zone.id;
+        option.textContent =
+          `${zone.label} (${timeZoneAbbreviation(new Date(), zone.id)})`;
+        ui.nodalTimezoneMenu.append(option);
+      }
+    }
+    function closeNodalTimeZoneMenu() {
+      ui.nodalTimezoneToggle.setAttribute("aria-expanded", "false");
+      ui.nodalTimezoneMenu.hidden = true;
+    }
+    function selectNodalTimeZone(timeZone) {
+      let selectedInstant;
+      try {
+        selectedInstant = localDateTimeToInstant(
+          ui.nodalDate.value,
+          Number(ui.nodalTime.value),
+          nodalPriceState.timeZone
+        );
+      } catch (error) {
+        ui.nodalStatus.textContent = error.message || String(error);
+        ui.nodalStatus.dataset.error = "true";
+        closeNodalTimeZoneMenu();
+        return;
+      }
+      const parts = dateTimePartsInZone(selectedInstant, timeZone);
+      nodalPriceState.timeZone = timeZone;
+      ui.nodalDate.value = dateStringFromParts(parts);
+      ui.nodalTime.value = String(
+        Number(parts.hour) * 60 + Math.floor(Number(parts.minute) / 5) * 5
+      );
+      closeNodalTimeZoneMenu();
+      updateNodalDateBounds();
+      updateNodalTimeLabel();
+      if (state.mode === "nodal") void loadNodalPrices();
+    }
+    function goToCurrentNodalInterval() {
+      const now = new Date();
+      const parts = dateTimePartsInZone(now, nodalPriceState.timeZone);
+      ui.nodalDate.value = dateStringFromParts(parts);
+      ui.nodalTime.value = String(
+        Number(parts.hour) * 60 + Math.floor(Number(parts.minute) / 5) * 5
+      );
+      updateNodalDateBounds();
+      updateNodalTimeLabel();
+      if (state.mode === "nodal") void loadNodalPrices();
+    }
+    function updateNodalTimeLabel() {
+      const value = formatNodalTime(ui.nodalTime.value);
+      ui.nodalTimeLabel.value = value;
+      const abbreviation = timeZoneAbbreviation(new Date(), nodalPriceState.timeZone);
+      ui.nodalTimezoneLabel.textContent = abbreviation;
+      $("nodal-date-label").textContent = `Operating date (${abbreviation})`;
+      ui.nodalTimezoneMenu.querySelectorAll("[data-time-zone]").forEach(option => {
+        option.setAttribute(
+          "aria-checked",
+          String(option.dataset.timeZone === nodalPriceState.timeZone)
+        );
+      });
+      ui.nodalTime.setAttribute("aria-valuetext", `${value} ${abbreviation}`);
+      const minutes = Number(ui.nodalTime.value);
+      ui.nodalTimePrev.disabled = ui.nodalTime.disabled || minutes <= Number(ui.nodalTime.min);
+      ui.nodalTimeNext.disabled = ui.nodalTime.disabled || minutes >= Number(ui.nodalTime.max);
+      ui.nodalTimeNow.disabled = ui.nodalTime.disabled;
+    }
+    function adjustNodalTime(direction) {
+      if (ui.nodalTime.disabled) return;
+      const minutes = Number(ui.nodalTime.value) + direction * Number(ui.nodalTime.step);
+      ui.nodalTime.value = String(Math.max(
+        Number(ui.nodalTime.min),
+        Math.min(Number(ui.nodalTime.max), minutes)
+      ));
+      ui.nodalTime.dispatchEvent(new Event("input", { bubbles: true }));
+      ui.nodalTime.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    function syncNodalIsoOptions() {
+      const selected = new Set(selectedNodalIsos());
+      ui.nodalIsoOptions.querySelectorAll("input[data-nodal-iso]").forEach(input => {
+        input.checked = input.dataset.nodalIso === "ALL"
+          ? selected.size === ISO_CODES.length
+          : selected.has(input.dataset.nodalIso);
+      });
+    }
+    function updateNodalDateBounds() {
+      const maximum = dateStringInZone(new Date(), nodalPriceState.timeZone);
+      ui.nodalDate.max = maximum;
+      if (!ui.nodalDate.value || ui.nodalDate.value > maximum) {
+        ui.nodalDate.value = maximum;
+      }
+    }
+    renderNodalTimeZoneMenu();
+    const nowInLocalTimeZone = dateTimePartsInZone(new Date(), nodalPriceState.timeZone);
+    ui.nodalDate.value = dateStringFromParts(nowInLocalTimeZone);
+    ui.nodalDate.max = ui.nodalDate.value;
+    ui.nodalTime.value = String(
+      Number(nowInLocalTimeZone.hour) * 60 +
+      Math.floor(Number(nowInLocalTimeZone.minute) / 5) * 5
+    );
+    updateNodalTimeLabel();
     document.documentElement.dataset.theme = state.theme;
 
     const map = new mapboxgl.Map({
@@ -1595,10 +2038,10 @@
     }
 
     function syncRegionControls() {
-      document.querySelectorAll(".region-group-toggle").forEach(button => {
+      document.querySelectorAll(".region-group-toggle[data-region-group]").forEach(button => {
         button.setAttribute("aria-expanded", String(button.dataset.regionGroup === state.openRegionGroup));
       });
-      document.querySelectorAll(".region-options").forEach(container => {
+      document.querySelectorAll(".region-options[data-region-options]").forEach(container => {
         container.hidden = container.dataset.regionOptions !== state.openRegionGroup;
         container.querySelectorAll("input[data-region]").forEach(input => {
           input.checked = state.regions.has(input.dataset.region);
@@ -1626,7 +2069,7 @@
     }
 
     function renderRegionOptions() {
-      document.querySelectorAll(".region-options").forEach(container => {
+      document.querySelectorAll(".region-options[data-region-options]").forEach(container => {
         const group = REGION_GROUPS[container.dataset.regionOptions];
         container.innerHTML = group.regions.map(([region, label]) =>
           `<div class="region-option-row"><label class="region-option"><input type="checkbox" data-region="${escapeHtml(region)}"><span>${escapeHtml(label)}</span></label>` +
@@ -2004,28 +2447,29 @@
       });
     }
 
-    function updateNodalPricePaint(metadata) {
-      if (!metadata || !map.getLayer("nodal-prices") ||
-          !Number.isFinite(Number(metadata.min_price)) ||
-          !Number.isFinite(Number(metadata.max_price))) return;
-      let minimum = Number(metadata.min_price);
-      let maximum = Number(metadata.max_price);
-      if (minimum === maximum) {
-        minimum -= 1;
-        maximum += 1;
+    function nodalPriceColorExpression() {
+      const expression = ["case"];
+      for (const band of NODAL_PRICE_BANDS.slice(0, -1)) {
+        expression.push(
+          [band.operator, ["get", "price"], band.threshold],
+          band.color
+        );
       }
-      map.setPaintProperty("nodal-prices", "circle-color", [
-        "interpolate", ["linear"], ["get", "price"],
-        minimum, "#2563eb",
-        (minimum + maximum) / 2, "#facc15",
-        maximum, "#dc2626"
-      ]);
-      ui.priceMin.textContent = `$${formatPrice(metadata.min_price)}`;
-      ui.priceMax.textContent = `$${formatPrice(metadata.max_price)}`;
+      expression.push(NODAL_PRICE_BANDS.at(-1).color);
+      return expression;
     }
 
-    async function fetchNodalPricesForIso(iso, day, market, aggregation) {
-      const params = new URLSearchParams({ iso, date: day, market, aggregation });
+    function updateNodalPricePaint() {
+      if (!map.getLayer("nodal-prices")) return;
+      map.setPaintProperty(
+        "nodal-prices", "circle-color", nodalPriceColorExpression()
+      );
+    }
+
+    async function fetchNodalPricesForIso(iso, day, localTime, product, aggregation) {
+      const params = new URLSearchParams({
+        iso, date: day, time: localTime, product, aggregation
+      });
       const response = await fetch(`/api/nodal-prices?${params}`);
       if (!response.ok) {
         if (response.status === 404) {
@@ -2044,7 +2488,7 @@
       return response.json();
     }
 
-    function combineAllNodalPrices(isoCodes, responses, market, day, aggregation) {
+    function combineAllNodalPrices(isoCodes, responses, product, day, localTime, aggregation) {
       const loaded = [];
       const failed = [];
       responses.forEach((response, index) => {
@@ -2085,12 +2529,16 @@
         prices,
         metadata: {
           iso: "ALL",
-          market,
+          product,
           date: day,
+          requested_local_time: localTime,
           aggregation,
           loaded_isos: loaded.map(({ iso }) => iso),
           failed_isos: failed,
           matched_nodes: features.length,
+          approximate_mapped_nodes: metadata.reduce(
+            (total, row) => total + (Number(row.approximate_mapped_nodes) || 0), 0
+          ),
           unmatched_nodes: metadata.reduce(
             (total, row) => total + (Number(row.unmatched_nodes) || 0), 0
           ),
@@ -2103,41 +2551,81 @@
     async function loadNodalPrices() {
       if (state.mode !== "nodal") return;
       const request = ++nodalPriceState.request;
-      const iso = ui.nodalIso.value;
+      const isoCodes = selectedNodalIsos();
       const day = ui.nodalDate.value;
-      const market = ui.nodalMarket.value;
+      const localTime = formatNodalTime(ui.nodalTime.value);
+      const product = ui.nodalProduct.value;
       const aggregation = ui.nodalAggregation.value;
+      if (!isoCodes.length) {
+        ui.nodalStatus.textContent = "Select at least one ISO region.";
+        ui.nodalStatus.dataset.error = "true";
+        return;
+      }
       if (!day) {
         ui.nodalStatus.textContent = "Choose an operating date.";
         ui.nodalStatus.dataset.error = "true";
         return;
       }
-      Object.assign(nodalPriceState, { iso, market, aggregation });
-      const isoLabel = iso === "ALL" ? "all ISO regions" : iso;
+      if (aggregation === "latest" && !localTime) {
+        ui.nodalStatus.textContent = "Choose a local price time.";
+        ui.nodalStatus.dataset.error = "true";
+        return;
+      }
+      let selectedInstant;
+      try {
+        selectedInstant = localDateTimeToInstant(
+          day,
+          aggregation === "average" ? 12 * 60 : Number(ui.nodalTime.value),
+          nodalPriceState.timeZone
+        );
+      } catch (error) {
+        ui.nodalStatus.textContent = error.message || String(error);
+        ui.nodalStatus.dataset.error = "true";
+        return;
+      }
+      const isoRequestTimes = new Map(
+        isoCodes.map(iso => [iso, localTimeForIso(selectedInstant, iso)])
+      );
+      Object.assign(nodalPriceState, {
+        isoCodes, product, aggregation, localTime,
+        timeZone: nodalPriceState.timeZone
+      });
+      ui.nodalTime.disabled = aggregation === "average";
+      updateNodalTimeLabel();
+      const isoLabel = isoCodes.length === 1
+        ? isoCodes[0]
+        : `${isoCodes.length} ISO regions`;
+      const localTimeZone = timeZoneAbbreviation(
+        new Date(), nodalPriceState.timeZone
+      );
       ui.nodalStatus.textContent =
-        `Loading ${isoLabel} ${market === "rt" ? "real-time" : "day-ahead"} prices…`;
+        `Loading ${isoLabel} ${PRICE_PRODUCT_LABELS[product]}` +
+        `${aggregation === "latest" ? ` as of ${localTime} ${localTimeZone}` : ""}…`;
       delete ui.nodalStatus.dataset.error;
       nodalPriceState.records = [];
       ui.nodalExport.disabled = true;
-      ui.priceMin.textContent = "—";
-      ui.priceMax.textContent = "—";
       const source = map.getSource("nodal-prices");
       if (source) source.setData({ type: "FeatureCollection", features: [] });
       try {
         await ensureLayer("nodalPrices");
         let result;
-        if (iso === "ALL") {
-          const isoCodes = Object.keys(ISO_TIMEZONES);
+        if (isoCodes.length > 1) {
           const responses = await Promise.allSettled(
-            isoCodes.map(region => fetchNodalPricesForIso(
-              region, day, market, aggregation
-            ))
+            isoCodes.map(iso => {
+              const requestTime = isoRequestTimes.get(iso);
+              return fetchNodalPricesForIso(
+                iso, requestTime.day, requestTime.time, product, aggregation
+              );
+            })
           );
           result = combineAllNodalPrices(
-            isoCodes, responses, market, day, aggregation
+            isoCodes, responses, product, day, localTime, aggregation
           );
         } else {
-          result = await fetchNodalPricesForIso(iso, day, market, aggregation);
+          const requestTime = isoRequestTimes.get(isoCodes[0]);
+          result = await fetchNodalPricesForIso(
+            isoCodes[0], requestTime.day, requestTime.time, product, aggregation
+          );
         }
         if (request !== nodalPriceState.request || state.mode !== "nodal") return;
         map.getSource("nodal-prices").setData({
@@ -2147,8 +2635,8 @@
         nodalPriceState.metadata = result.metadata;
         nodalPriceState.records = result.prices || [];
         ui.nodalExport.disabled = nodalPriceState.records.length === 0;
-        updateNodalPricePaint(result.metadata);
-        if (iso === "ALL") {
+        updateNodalPricePaint();
+        if (isoCodes.length > 1) {
           const loaded = result.metadata.loaded_isos || [];
           const failed = result.metadata.failed_isos || [];
           const unavailable = failed
@@ -2161,15 +2649,28 @@
           const errorSummary = errors.length
             ? ` Could not load: ${errors.map(item => `${item.iso} (${item.error})`).join("; ")}.`
             : "";
+          const approximateCount = Number(result.metadata.approximate_mapped_nodes) || 0;
+          const approximateSummary = approximateCount
+            ? ` ${approximateCount} node locations are approximate.`
+            : "";
           ui.nodalStatus.textContent =
-            `${loaded.length} of ${Object.keys(ISO_TIMEZONES).length} ISO regions loaded; ` +
+            `${loaded.length} of ${isoCodes.length} selected ISO regions loaded; ` +
             `${result.metadata.matched_nodes} mapped nodes; ` +
             `${result.metadata.unmatched_nodes} price nodes have no coordinates.` +
+            approximateSummary +
+            (aggregation === "latest"
+              ? ` Latest available interval at or before ${localTime} ${localTimeZone}; actual interval times are shown in marker popups.`
+              : "") +
             unavailableSummary + errorSummary;
         } else if (result.metadata.matched_nodes) {
+          const approximateCount = Number(result.metadata.approximate_mapped_nodes) || 0;
           ui.nodalStatus.textContent =
             `${result.metadata.matched_nodes} mapped nodes; ` +
-            `${result.metadata.unmatched_nodes} price nodes have no coordinates.`;
+            `${result.metadata.unmatched_nodes} price nodes have no coordinates.` +
+            (approximateCount ? ` ${approximateCount} node locations are approximate.` : "") +
+            (aggregation === "latest"
+              ? ` Latest available interval at or before ${localTime} ${localTimeZone}; actual interval times are shown in marker popups.`
+              : "");
         } else {
           ui.nodalStatus.textContent =
             `${nodalPriceState.records.length} prices loaded, but none have coordinates. ` +
@@ -2187,9 +2688,15 @@
     function exportNodalPrices() {
       if (!nodalPriceState.records.length) return;
       const columns = [
-        "ISO", "Market", "Operating Date", "Aggregation", "Node ID", "Node",
-        "Zone", "LMP ($/MWh)", "Energy ($/MWh)", "Congestion ($/MWh)",
-        "Loss ($/MWh)", "Timestamp", "Intervals", "Longitude", "Latitude"
+        "ISO", "Product", "Operating Date", "Requested Local Time",
+        "Requested Time Zone",
+        "Aggregation", "Node ID", "Node", "Zone", "Selected Price ($/MWh)",
+        "LMP ($/MWh)", "Energy ($/MWh)", "Congestion ($/MWh)", "Loss ($/MWh)",
+        "Real-time component ($/MWh)", "Day-ahead component ($/MWh)",
+        "Actual Interval (ISO Local)", "Real-time Interval (ISO Local)",
+        "Day-ahead Interval (ISO Local)", "Timestamp (UTC)",
+        "Day-ahead Timestamp (UTC)", "Intervals", "Mapped Location",
+        "Mapping Method", "Longitude", "Latitude"
       ];
       const csvCell = value => {
         const text = value == null ? "" : String(value);
@@ -2197,19 +2704,30 @@
         return `"${safe.replaceAll('"', '""')}"`;
       };
       const rows = nodalPriceState.records.map(record => [
-        record.iso || nodalPriceState.iso,
-        nodalPriceState.market,
+        record.iso || nodalPriceState.isoCodes[0],
+        PRICE_PRODUCT_LABELS[record.price_product || nodalPriceState.product],
         ui.nodalDate.value,
+        nodalPriceState.localTime,
+        nodalPriceState.timeZone,
         nodalPriceState.aggregation,
         record.node_id,
         record.node,
         record.zone,
         record.price,
+        record.lmp,
         record.energy,
         record.congestion,
         record.loss,
+        record.real_time_value,
+        record.day_ahead_value,
+        record.local_timestamp,
+        record.real_time_local_timestamp,
+        record.day_ahead_local_timestamp,
         record.timestamp,
+        record.day_ahead_timestamp,
         record.interval_count,
+        record.mapped_station,
+        record.mapping_method,
         record.longitude,
         record.latitude
       ]);
@@ -2219,8 +2737,9 @@
       const link = document.createElement("a");
       link.href = url;
       link.download =
-        `nodal-prices-${nodalPriceState.iso}-${ui.nodalDate.value}-` +
-        `${nodalPriceState.market}-${nodalPriceState.aggregation}.csv`;
+        `nodal-prices-${nodalPriceState.isoCodes.join("-")}-${ui.nodalDate.value}-` +
+        `${nodalPriceState.localTime}-` +
+        `${nodalPriceState.product}-${nodalPriceState.aggregation}.csv`;
       link.click();
       URL.revokeObjectURL(url);
     }
@@ -2241,6 +2760,86 @@
     // ---- Popups ----
     const VOLT_LABEL = Object.fromEntries(VOLTAGE.map(([key, label]) => [key, label]));
     const openPopup = (lngLat, html) => new mapboxgl.Popup({ maxWidth: "290px" }).setLngLat(lngLat).setHTML(html).addTo(map);
+    let nodalHoverPopup = null;
+    let nodalHoverFeatureKey = "";
+
+    function formatNodalHoverTime(properties) {
+      const timeZone = ISO_TIMEZONES[properties.price_iso];
+      if (properties.price_local_timestamp && timeZone) {
+        return new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone,
+          timeZoneName: "short"
+        }).format(new Date(properties.price_local_timestamp)).replace(",", "");
+      }
+      if (properties.price_date) {
+        const [year, month, day] = String(properties.price_date).split("-").map(Number);
+        if (year && month && day) {
+          const date = new Intl.DateTimeFormat("en-US", {
+            month: "short",
+            day: "numeric",
+            timeZone: "UTC"
+          }).format(new Date(Date.UTC(year, month - 1, day)));
+          return `Daily average · ${date}`;
+        }
+      }
+      return "Selected interval";
+    }
+
+    function nodalPriceHoverHtml(properties) {
+      const metric = (label, value) => {
+        const missing = value === null || value === undefined || !Number.isFinite(Number(value));
+        const formatted = missing ? "N/A" : `$${formatPrice(value)}`;
+        return `<div class="nodal-card-metric"><span class="nodal-card-label">${label}</span><strong class="nodal-card-value${missing ? " is-missing" : ""}">${formatted}</strong></div>`;
+      };
+      const mappingNote = properties.mapping_method
+        ? `<div class="nodal-card-mapping">Approximate location: ${escapeHtml(properties.mapped_station || "MISO region")}</div>`
+        : "";
+      return `<div class="nodal-price-card">
+        <div class="nodal-card-title">[${escapeHtml(properties.name || properties.node_id || "Price node")}]</div>
+        <div class="nodal-card-time">${escapeHtml(formatNodalHoverTime(properties))}</div>
+        ${mappingNote}
+        <div class="nodal-card-grid">
+          ${metric("LMP", properties.lmp)}
+          ${metric("Energy", properties.energy)}
+          ${metric("Cong", properties.congestion)}
+          ${metric("Loss", properties.loss)}
+        </div>
+      </div>`;
+    }
+
+    function showNodalPriceHover(e) {
+      const feature = e.features?.[0];
+      if (!feature) return;
+      const properties = feature.properties;
+      const featureKey = [
+        properties.price_iso,
+        properties.node_id,
+        properties.price_product,
+        properties.price_local_timestamp,
+        properties.price,
+        properties.energy,
+        properties.congestion,
+        properties.loss
+      ].join(":");
+      if (!nodalHoverPopup) {
+        nodalHoverPopup = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          maxWidth: "none",
+          offset: 14,
+          className: "nodal-hover-popup"
+        });
+      }
+      if (featureKey !== nodalHoverFeatureKey) {
+        nodalHoverPopup.setHTML(nodalPriceHoverHtml(properties));
+        nodalHoverFeatureKey = featureKey;
+      }
+      nodalHoverPopup.setLngLat(e.lngLat).addTo(map);
+    }
 
     function openTransmissionLinePopup(e) {
       const p = e.features[0].properties;
@@ -2308,22 +2907,36 @@
     });
 
     map.on("click", "nodal-prices", e => {
+      nodalHoverPopup?.remove();
+      nodalHoverFeatureKey = "";
       const feature = e.features[0];
       const properties = feature.properties;
       openPopup(feature.geometry.coordinates, popupHtml(properties.name || properties.node_id, [
         ["Node ID", properties.node_id],
-        ["Mapped substation", properties.mapped_station],
+        ["Mapped location", properties.mapped_station],
+        ["Location match", properties.mapping_method || "Exact station match"],
         ["Zone", properties.zone],
-        ["LMP", `$${formatPrice(properties.price)} / MWh`],
+        ["Selected price", `$${formatPrice(properties.price)} / MWh`],
+        ["Day-ahead value", properties.day_ahead_value == null ? null : `$${formatPrice(properties.day_ahead_value)} / MWh`],
+        ["Real-time value", properties.real_time_value == null ? null : `$${formatPrice(properties.real_time_value)} / MWh`],
+        ["LMP", properties.lmp == null ? null : `$${formatPrice(properties.lmp)} / MWh`],
         ["Energy", properties.energy == null ? null : `$${formatPrice(properties.energy)} / MWh`],
         ["Congestion", properties.congestion == null ? null : `$${formatPrice(properties.congestion)} / MWh`],
         ["Loss", properties.loss == null ? null : `$${formatPrice(properties.loss)} / MWh`],
         ["ISO", properties.price_iso],
-        ["Market", properties.price_market === "rt" ? "Real-time" : "Day-ahead"],
+        ["Product", PRICE_PRODUCT_LABELS[properties.price_product]],
         ["Operating date", properties.price_date],
-        ["Latest interval", properties.price_timestamp],
+        ["Requested local time", properties.requested_local_time],
+        ["Actual price interval (ISO local)", properties.price_local_timestamp],
+        ["Day-ahead interval (ISO local)", properties.day_ahead_local_timestamp],
         ["Intervals averaged", properties.interval_count]
       ]));
+    });
+    map.on("mouseenter", "nodal-prices", showNodalPriceHover);
+    map.on("mousemove", "nodal-prices", showNodalPriceHover);
+    map.on("mouseleave", "nodal-prices", () => {
+      nodalHoverPopup?.remove();
+      nodalHoverFeatureKey = "";
     });
 
     map.on("click", "offshore-cables-hit", e => {
@@ -2357,6 +2970,7 @@
       ui.plantsPanel.hidden = mode !== "plants";
       ui.networkPanel.hidden = mode !== "network";
       ui.nodalPanel.hidden = mode !== "nodal";
+      ui.nodalPanel.parentElement.classList.toggle("control-panel--nodal", mode === "nodal");
       if (mode === "network") {
         networkLayerBatch += 1;
         hideLayers([...MODE_LAYERS.plants, ...MODE_LAYERS.network, ...MODE_LAYERS.nodal]);
@@ -2382,7 +2996,7 @@
       setPlantStatus(status);
     });
     renderRegionOptions();
-    document.querySelectorAll(".region-group-toggle").forEach(button => {
+    document.querySelectorAll(".region-group-toggle[data-region-group]").forEach(button => {
       button.addEventListener("click", () => toggleRegionGroup(button.dataset.regionGroup));
     });
     ui.capMin.addEventListener("input", () => updateCapacity(ui.capMin));
@@ -2394,23 +3008,71 @@
     ui.nodalButton.addEventListener("click", () => switchMode("nodal"));
     ui.plantsButton.addEventListener("click", () => switchMode("plants"));
     ui.networkButton.addEventListener("click", () => switchMode("network"));
-    ui.nodalIso.addEventListener("change", () => {
-      const dateWasCurrent = ui.nodalDate.value === ui.nodalDate.max;
-      const todayForIso = isoToday(ui.nodalIso.value);
-      ui.nodalDate.max = todayForIso;
-      if (dateWasCurrent) ui.nodalDate.value = todayForIso;
-      $("nodal-date-label").textContent =
-        ui.nodalIso.value === "ALL"
-          ? "Operating date (local in each ISO)"
-          : "Operating date (ISO local)";
+    ui.nodalIsoToggle.addEventListener("click", () => {
+      const open = ui.nodalIsoToggle.getAttribute("aria-expanded") !== "true";
+      ui.nodalIsoToggle.setAttribute("aria-expanded", String(open));
+      ui.nodalIsoOptions.hidden = !open;
+    });
+    ui.nodalTimezoneToggle.addEventListener("click", () => {
+      const open = ui.nodalTimezoneToggle.getAttribute("aria-expanded") !== "true";
+      ui.nodalTimezoneToggle.setAttribute("aria-expanded", String(open));
+      ui.nodalTimezoneMenu.hidden = !open;
+    });
+    ui.nodalTimezoneMenu.addEventListener("click", event => {
+      const option = event.target.closest("[data-time-zone]");
+      if (option) selectNodalTimeZone(option.dataset.timeZone);
+    });
+    document.addEventListener("click", event => {
+      if (!ui.nodalTimezoneWrap.contains(event.target)) closeNodalTimeZoneMenu();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !ui.nodalTimezoneMenu.hidden) {
+        closeNodalTimeZoneMenu();
+        ui.nodalTimezoneToggle.focus();
+      }
+    });
+    ui.nodalIsoOptions.addEventListener("change", event => {
+      const input = event.target.closest("input[data-nodal-iso]");
+      if (!input) return;
+      if (input.dataset.nodalIso === "ALL") {
+        const selected = input.checked ? ISO_CODES : ["CAISO"];
+        ui.nodalIsoOptions.querySelectorAll("input[data-nodal-iso]").forEach(option => {
+          option.checked = option.dataset.nodalIso === "ALL"
+            ? input.checked && selected.length === ISO_CODES.length
+            : selected.includes(option.dataset.nodalIso);
+        });
+      } else if (!selectedNodalIsos().length) {
+        input.checked = true;
+        return;
+      }
+      syncNodalIsoOptions();
+      updateNodalDateBounds();
       if (state.mode === "nodal") void loadNodalPrices();
     });
-    [ui.nodalDate, ui.nodalMarket, ui.nodalAggregation].forEach(control => {
+    ui.nodalIsoOptions.addEventListener("click", event => {
+      const onlyButton = event.target.closest("[data-only-nodal-iso]");
+      if (!onlyButton) return;
+      const selectedIso = onlyButton.dataset.onlyNodalIso;
+      ui.nodalIsoOptions.querySelectorAll("input[data-nodal-iso]").forEach(input => {
+        input.checked = input.dataset.nodalIso === selectedIso;
+      });
+      syncNodalIsoOptions();
+      updateNodalDateBounds();
+      if (state.mode === "nodal") void loadNodalPrices();
+    });
+    [ui.nodalDate, ui.nodalProduct, ui.nodalAggregation].forEach(control => {
       control.addEventListener("change", () => {
         if (state.mode === "nodal") void loadNodalPrices();
       });
     });
-    ui.nodalRefresh.addEventListener("click", () => void loadNodalPrices());
+    ui.nodalTime.addEventListener("input", updateNodalTimeLabel);
+    ui.nodalTime.addEventListener("change", () => {
+      updateNodalTimeLabel();
+      if (state.mode === "nodal") void loadNodalPrices();
+    });
+    ui.nodalTimePrev.addEventListener("click", () => adjustNodalTime(-1));
+    ui.nodalTimeNext.addEventListener("click", () => adjustNodalTime(1));
+    ui.nodalTimeNow.addEventListener("click", goToCurrentNodalInterval);
     ui.nodalExport.addEventListener("click", exportNodalPrices);
     const aboutOverlay = $("about-overlay");
     const aboutButton = $("about-button");
