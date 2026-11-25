@@ -91,8 +91,8 @@ defaults. It is greyed out when nothing is filtered.
 The page (`src\dart_tool\map_v2.html`) is rendered with
 [Mapbox GL JS](https://github.com/mapbox/mapbox-gl-js) (WebGL). It reads the
 preconverted power-plant GeoJSON files, the substation CSV, ISO-region GeoJSON
-files, and the complete
-`src\dart_tool\data\tx_lines\tx_lines_complete_hifld.geojson`.
+files, and the HIFLD transmission shapefile archive
+`src\dart_tool\data\tx_lines\Electric_Power_Transmission_Lines.zip`.
 The large transmission-line file is fetched only when the Infrastructure Map
 tab is selected and an AC voltage class is visible. The Infrastructure Map
 preloads the 17-feature DC subset from
@@ -146,24 +146,28 @@ The generated files are stored in
 `pr_operating_pp.geojson`, `pr_planned_pp.geojson`, and
 `pr_retired_pp.geojson`.
 
-No Python packages are needed. An internet connection is required for the
-Mapbox GL JS library and basemap tiles. Stop the local server with **Ctrl+C**.
+Install the Python dependencies with `python -m pip install -r requirements.txt`.
+An internet connection is required for the Mapbox GL JS library and basemap
+tiles. Stop the local server with **Ctrl+C**.
 
 ## Complete HIFLD transmission lines
 
-`src\dart_tool\fetch_hifld_tx_lines.py` downloads all records and geometries
-from the public [Transmission Lines (HIFLD) ArcGIS layer](https://www.arcgis.com/home/item.html?id=d77284d1a97a426eaf960bab4764999c&sublayer=0&dataTabView=table)
-and writes a WGS 84 GeoJSON FeatureCollection to
-`src\dart_tool\data\tx_lines\tx_lines_complete_hifld.geojson`. GeoJSON preserves
-the line geometries and attributes; no Python packages are required.
+The map reads the HIFLD shapefile archive at
+`src\dart_tool\data\tx_lines\Electric_Power_Transmission_Lines.zip`. The server
+converts its Web Mercator geometries to WGS 84 GeoJSON on demand and includes
+the line attributes used by the map. This avoids tracking a very large
+preconverted GeoJSON file in Git. The archive is from the public
+[Transmission Lines (HIFLD) ArcGIS layer](https://www.arcgis.com/home/item.html?id=d77284d1a97a426eaf960bab4764999c&sublayer=0&dataTabView=table).
+
+To generate a standalone full-attribute GeoJSON export, run the optional
 
 ```powershell
 python src\dart_tool\fetch_hifld_tx_lines.py
 ```
 
-The ArcGIS layer currently reports 94,619 records, two fewer than the
-94,621-record target. The script reports this difference and exports every
-record currently available from the source.
+The map uses the ZIP archive, not this generated export. The generated
+`tx_lines_complete_hifld.geojson` is ignored by Git because it exceeds GitHub's
+per-file size limit.
 
 ## NETL U.S. power plants
 

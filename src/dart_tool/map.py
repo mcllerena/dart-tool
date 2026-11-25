@@ -6,6 +6,7 @@ import argparse
 import csv
 import gzip
 import importlib
+import io
 import json
 import logging
 import math
@@ -33,11 +34,142 @@ DEFAULT_MAPBOX_TOKEN = (
     "pk.eyJ1IjoibWNsbGVyZW5hIiwiYSI6ImNtd3F1M2cyNDB6bTAzMHB4emluMGtxdmEifQ."
     "i-EY2QOnI4Vs2KH9NokNmw"
 )
-GEOJSON_PATH = DATA_DIR / "tx_lines" / "tx_lines_complete_hifld.geojson"
+TRANSMISSION_LINES_ZIP_PATH = (
+    DATA_DIR / "tx_lines" / "Electric_Power_Transmission_Lines.zip"
+)
 DC_GEOJSON_PATH = DATA_DIR / "tx_lines" / "tx_lines_dc.geojson"
 HVDC_GEOJSON_PATH = DATA_DIR / "tx_lines" / "sunzia_transmission_project.geojson"
 OFFSHORE_CABLES_PATH = DATA_DIR / "tx_lines" / "offshore_wind_tx_cables.geojson"
 _KV_NUMBER = re.compile(r"\d+(?:\.\d+)?")
+_WEB_MERCATOR_RADIUS = 6_378_137
+_TRANSMISSION_LINE_PROPERTIES = (
+    "ID",
+    "TYPE",
+    "STATUS",
+    "OWNER",
+    "VOLTAGE",
+    "VOLT_CLASS",
+    "INFERRED",
+    "SUB_1",
+    "SUB_2",
+)
+
+
+def _web_mercator_to_wgs84(x: float, y: float) -> list[float]:
+    longitude = math.degrees(x / _WEB_MERCATOR_RADIUS)
+    latitude = math.degrees(
+        2 * math.atan(math.exp(y / _WEB_MERCATOR_RADIUS)) - math.pi / 2
+    )
+    return [longitude, latitude]
+
+
+def _transform_web_mercator_coordinates(value: Any) -> Any:
+    if (
+        isinstance(value, (list, tuple))
+        and len(value) >= 2
+        and isinstance(value[0], (int, float))
+        and isinstance(value[1], (int, float))
+    ):
+        return _web_mercator_to_wgs84(float(value[0]), float(value[1]))
+    if isinstance(value, (list, tuple)):
+        return [_transform_web_mercator_coordinates(item) for item in value]
+    raise ValueError(f"Unexpected transmission coordinate: {value!r}")
+
+
+def read_transmission_line_features(zip_path: Path) -> dict[str, Any]:
+    """Read the HIFLD shapefile archive and return compact WGS84 GeoJSON."""
+    import shapefile
+
+    try:
+        with zipfile.ZipFile(zip_path) as archive:
+            members = {
+                Path(name).name.casefold(): name
+                for name in archive.namelist()
+                if not name.endswith("/")
+            }
+            required_extensions = (".shp", ".shx", ".dbf", ".prj")
+            shapefile_stem = next(
+                (
+                    Path(name).stem
+                    for name in members.values()
+                    if name.casefold().endswith(".shp")
+                ),
+                None,
+            )
+            if shapefile_stem is None:
+                raise ValueError(f"{zip_path} contains no .shp file")
+            base_name = shapefile_stem.casefold()
+            component_paths = {
+                extension: members.get(f"{base_name}{extension}")
+                for extension in required_extensions
+            }
+            missing = [
+                extension
+                for extension, member in component_paths.items()
+                if member is None
+            ]
+            if missing:
+                raise ValueError(
+                    f"{zip_path} is missing shapefile components: "
+                    f"{', '.join(missing)}"
+                )
+            projection = archive.read(component_paths[".prj"]).decode(
+                "utf-8-sig"
+            )
+            if "MERCATOR" not in projection.upper() or "WGS_1984" not in projection.upper():
+                raise ValueError(
+                    f"Unsupported transmission shapefile projection in {zip_path}"
+                )
+            reader = shapefile.Reader(
+                shp=io.BytesIO(archive.read(component_paths[".shp"])),
+                shx=io.BytesIO(archive.read(component_paths[".shx"])),
+                dbf=io.BytesIO(archive.read(component_paths[".dbf"])),
+                encoding="utf-8",
+            )
+            field_names = [field[0] for field in reader.fields[1:]]
+            required_fields = set(_TRANSMISSION_LINE_PROPERTIES)
+            if not required_fields.issubset(field_names):
+                missing_fields = sorted(required_fields.difference(field_names))
+                raise ValueError(
+                    f"{zip_path} is missing required transmission fields: "
+                    f"{', '.join(missing_fields)}"
+                )
+            features = []
+            for shape_record in reader.iterShapeRecords():
+                shape = shape_record.shape
+                if shape.shapeType not in {
+                    shapefile.POLYLINE,
+                    shapefile.POLYLINEZ,
+                    shapefile.POLYLINEM,
+                }:
+                    continue
+                geometry = shape.__geo_interface__
+                coordinates = geometry.get("coordinates")
+                if not coordinates:
+                    continue
+
+                record = shape_record.record.as_dict()
+                properties = {
+                    key: record.get(key)
+                    for key in _TRANSMISSION_LINE_PROPERTIES
+                }
+                features.append({
+                    "type": "Feature",
+                    "id": record.get("ID"),
+                    "geometry": {
+                        "type": geometry["type"],
+                        "coordinates": _transform_web_mercator_coordinates(
+                            coordinates
+                        ),
+                    },
+                    "properties": properties,
+                })
+    except zipfile.BadZipFile as error:
+        raise ValueError(f"Unable to read transmission data archive {zip_path}") from error
+
+    if not features:
+        raise ValueError(f"No transmission line features found in {zip_path}")
+    return {"type": "FeatureCollection", "features": features}
 
 
 def _clean_cable_text(value: Any) -> str | None:
@@ -468,6 +600,16 @@ class MapRepository:
             )
         return self._point_cache[layer_name]
 
+    def transmission_lines(self) -> dict[str, Any]:
+        cache_key = "transmission-lines"
+        path = self.data_dir / TRANSMISSION_LINES_ZIP_PATH.relative_to(DATA_DIR)
+        modified_at = path.stat().st_mtime_ns
+        modified_at_key = f"{cache_key}:modified-at"
+        if self._point_cache.get(modified_at_key) != modified_at:
+            self._point_cache[cache_key] = read_transmission_line_features(path)
+            self._point_cache[modified_at_key] = modified_at
+        return self._point_cache[cache_key]
+
     def nodal_prices(
         self,
         iso: str,
@@ -844,12 +986,14 @@ class MapRequestHandler(BaseHTTPRequestHandler):
                 self.send_error(502, str(error))
                 return
         elif request.path == "/api/transmission-lines-geojson":
-            # Serve pre-computed transmission lines GeoJSON
-            if not GEOJSON_PATH.exists():
+            path = (
+                self.server.repository.data_dir
+                / TRANSMISSION_LINES_ZIP_PATH.relative_to(DATA_DIR)
+            )
+            if not path.exists():
                 self.send_error(503, "Transmission lines data not ready")
                 return
-            self._send_file(GEOJSON_PATH, "application/geo+json; charset=utf-8")
-            return
+            result = self.server.repository.transmission_lines()
         else:
             self.send_error(404, "Not found")
             return

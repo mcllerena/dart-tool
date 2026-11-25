@@ -9,6 +9,8 @@ from unittest.mock import Mock
 from xml.etree import ElementTree as ET
 from zipfile import ZIP_DEFLATED, ZipFile
 
+import shapefile
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from dart_tool.map import (
@@ -22,6 +24,55 @@ from dart_tool.map import (
 
 
 class MapDataTests(unittest.TestCase):
+    def test_transmission_lines_reads_zip_and_reprojects_to_wgs84(self):
+        with tempfile.TemporaryDirectory() as directory:
+            data_dir = Path(directory)
+            tx_lines_dir = data_dir / "tx_lines"
+            tx_lines_dir.mkdir()
+            shape_path = tx_lines_dir / "fixture"
+            writer = shapefile.Writer(str(shape_path), shapeType=shapefile.POLYLINE)
+            writer.field("ID", "C", size=12)
+            writer.field("TYPE", "C", size=20)
+            writer.field("STATUS", "C", size=20)
+            writer.field("OWNER", "C", size=32)
+            writer.field("VOLTAGE", "N", decimal=1)
+            writer.field("VOLT_CLASS", "C", size=12)
+            writer.field("INFERRED", "C", size=5)
+            writer.field("SUB_1", "C", size=20)
+            writer.field("SUB_2", "C", size=20)
+            writer.line([
+                [[0, 0], [111_319.490793, 111_325.142866]],
+                [[222_638.981586, 222_684.208506], [333_958.472379, 334_111.171402]],
+            ])
+            writer.record(
+                "line-1", "OVERHEAD", "IN SERVICE", "Utility", 230,
+                "200-299", "N", "NORTH", "SOUTH",
+            )
+            writer.close()
+            (tx_lines_dir / "fixture.prj").write_text(
+                'PROJCS["WGS_1984_Web_Mercator_Auxiliary_Sphere"]',
+                encoding="utf-8",
+            )
+            archive_path = tx_lines_dir / "Electric_Power_Transmission_Lines.zip"
+            with ZipFile(archive_path, "w", ZIP_DEFLATED) as archive:
+                for extension in (".shp", ".shx", ".dbf", ".prj"):
+                    member = shape_path.with_suffix(extension)
+                    archive.write(member, member.name)
+
+            result = MapRepository(data_dir).transmission_lines()
+
+        self.assertEqual(result["type"], "FeatureCollection")
+        self.assertEqual(len(result["features"]), 1)
+        feature = result["features"][0]
+        self.assertEqual(feature["geometry"]["type"], "MultiLineString")
+        first, second = feature["geometry"]["coordinates"]
+        self.assertAlmostEqual(first[0][0], 0, places=5)
+        self.assertAlmostEqual(first[0][1], 0, places=5)
+        self.assertAlmostEqual(first[1][0], 1, places=5)
+        self.assertAlmostEqual(first[1][1], 1, places=5)
+        self.assertEqual(feature["properties"]["VOLTAGE"], 230)
+        self.assertEqual(feature["properties"]["SUB_1"], "NORTH")
+
     def test_offshore_cables_classify_current_and_voltage(self):
         dc = offshore_cable_properties(
             {"ELECTRIC_CURRENT_TYPE": "DC", "KILOVOLT_RATING": "320-525", "PROJECT_NAME": "<Null>"}
