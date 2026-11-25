@@ -1,4 +1,5 @@
 import csv
+import gzip
 import json
 import os
 import sys
@@ -20,11 +21,12 @@ from dart_tool.map import (
     read_operating_plant_features,
     read_plant_sheet_features,
     read_point_features,
+    write_transmission_line_cache,
 )
 
 
 class MapDataTests(unittest.TestCase):
-    def test_transmission_lines_reads_zip_and_reprojects_to_wgs84(self):
+    def test_transmission_line_cache_is_compressed_and_reprojected_to_wgs84(self):
         with tempfile.TemporaryDirectory() as directory:
             data_dir = Path(directory)
             tx_lines_dir = data_dir / "tx_lines"
@@ -59,8 +61,16 @@ class MapDataTests(unittest.TestCase):
                     member = shape_path.with_suffix(extension)
                     archive.write(member, member.name)
 
-            result = MapRepository(data_dir).transmission_lines()
+            cache_path = tx_lines_dir / "tx_lines_compact.geojson.gz"
+            feature_count, compressed_size = write_transmission_line_cache(
+                archive_path, cache_path
+            )
+            actual_compressed_size = cache_path.stat().st_size
+            with gzip.open(cache_path, "rt", encoding="utf-8") as source:
+                result = json.load(source)
 
+        self.assertEqual(feature_count, 1)
+        self.assertEqual(compressed_size, actual_compressed_size)
         self.assertEqual(result["type"], "FeatureCollection")
         self.assertEqual(len(result["features"]), 1)
         feature = result["features"][0]

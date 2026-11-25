@@ -37,6 +37,9 @@ DEFAULT_MAPBOX_TOKEN = (
 TRANSMISSION_LINES_ZIP_PATH = (
     DATA_DIR / "tx_lines" / "Electric_Power_Transmission_Lines.zip"
 )
+TRANSMISSION_LINES_CACHE_PATH = (
+    DATA_DIR / "tx_lines" / "tx_lines_compact.geojson.gz"
+)
 DC_GEOJSON_PATH = DATA_DIR / "tx_lines" / "tx_lines_dc.geojson"
 HVDC_GEOJSON_PATH = DATA_DIR / "tx_lines" / "sunzia_transmission_project.geojson"
 OFFSHORE_CABLES_PATH = DATA_DIR / "tx_lines" / "offshore_wind_tx_cables.geojson"
@@ -56,9 +59,10 @@ _TRANSMISSION_LINE_PROPERTIES = (
 
 
 def _web_mercator_to_wgs84(x: float, y: float) -> list[float]:
-    longitude = math.degrees(x / _WEB_MERCATOR_RADIUS)
-    latitude = math.degrees(
-        2 * math.atan(math.exp(y / _WEB_MERCATOR_RADIUS)) - math.pi / 2
+    longitude = round(math.degrees(x / _WEB_MERCATOR_RADIUS), 5)
+    latitude = round(
+        math.degrees(2 * math.atan(math.exp(y / _WEB_MERCATOR_RADIUS)) - math.pi / 2),
+        5,
     )
     return [longitude, latitude]
 
@@ -170,6 +174,37 @@ def read_transmission_line_features(zip_path: Path) -> dict[str, Any]:
     if not features:
         raise ValueError(f"No transmission line features found in {zip_path}")
     return {"type": "FeatureCollection", "features": features}
+
+
+def write_transmission_line_cache(
+    zip_path: Path,
+    output_path: Path = TRANSMISSION_LINES_CACHE_PATH,
+) -> tuple[int, int]:
+    """Build a reproducible, compressed GeoJSON cache from the source archive."""
+    collection = read_transmission_line_features(zip_path)
+    payload = json.dumps(
+        collection,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    temp_path = output_path.with_name(output_path.name + ".tmp")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    completed = False
+    try:
+        with temp_path.open("wb") as raw_output, gzip.GzipFile(
+            fileobj=raw_output,
+            mode="wb",
+            compresslevel=5,
+            mtime=0,
+        ) as compressed_output:
+            compressed_output.write(payload)
+        os.replace(temp_path, output_path)
+        completed = True
+    finally:
+        if not completed:
+            temp_path.unlink(missing_ok=True)
+    return len(collection["features"]), output_path.stat().st_size
 
 
 def _clean_cable_text(value: Any) -> str | None:
@@ -600,16 +635,6 @@ class MapRepository:
             )
         return self._point_cache[layer_name]
 
-    def transmission_lines(self) -> dict[str, Any]:
-        cache_key = "transmission-lines"
-        path = self.data_dir / TRANSMISSION_LINES_ZIP_PATH.relative_to(DATA_DIR)
-        modified_at = path.stat().st_mtime_ns
-        modified_at_key = f"{cache_key}:modified-at"
-        if self._point_cache.get(modified_at_key) != modified_at:
-            self._point_cache[cache_key] = read_transmission_line_features(path)
-            self._point_cache[modified_at_key] = modified_at
-        return self._point_cache[cache_key]
-
     def nodal_prices(
         self,
         iso: str,
@@ -988,12 +1013,21 @@ class MapRequestHandler(BaseHTTPRequestHandler):
         elif request.path == "/api/transmission-lines-geojson":
             path = (
                 self.server.repository.data_dir
-                / TRANSMISSION_LINES_ZIP_PATH.relative_to(DATA_DIR)
+                / TRANSMISSION_LINES_CACHE_PATH.relative_to(DATA_DIR)
             )
             if not path.exists():
-                self.send_error(503, "Transmission lines data not ready")
+                self.send_error(
+                    503,
+                    "Transmission line cache not found. Run "
+                    "src/dart_tool/build_tx_line_cache.py.",
+                )
                 return
-            result = self.server.repository.transmission_lines()
+            self._send_file(
+                path,
+                "application/geo+json; charset=utf-8",
+                content_encoding="gzip",
+            )
+            return
         else:
             self.send_error(404, "Not found")
             return
@@ -1011,8 +1045,13 @@ class MapRequestHandler(BaseHTTPRequestHandler):
         else:
             self._send_bytes(payload, "application/geo+json; charset=utf-8")
 
-    def _send_file(self, path: Path, content_type: str) -> None:
-        self._send_bytes(path.read_bytes(), content_type)
+    def _send_file(
+        self,
+        path: Path,
+        content_type: str,
+        content_encoding: str | None = None,
+    ) -> None:
+        self._send_bytes(path.read_bytes(), content_type, content_encoding)
 
     def _send_bytes(
         self,

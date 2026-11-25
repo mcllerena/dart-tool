@@ -1,9 +1,13 @@
 # Transmission Data Workaround
 
-GitHub blocks files larger than 100 MB. The full transmission GeoJSON exceeded
-that limit, so the map now reads `Electric_Power_Transmission_Lines.zip`
-instead. The server uses `pyshp` to read the archive, converts its Web Mercator
-coordinates to WGS84, and serves map-ready GeoJSON.
+GitHub blocks files larger than 100 MB. The map uses
+`Electric_Power_Transmission_Lines.zip` to build a compact, precompressed WGS84
+GeoJSON cache. To rebuild the cache after replacing the ZIP, run:
 
-Keep the ZIP tracked. The generated `tx_lines_complete_hifld.geojson` is ignored
-by Git.
+```powershell
+python src\dart_tool\build_tx_line_cache.py
+```
+
+The map serves the cache directly, avoiding slow conversion and compression
+when the transmission layer is first opened. The oversized
+`tx_lines_complete_hifld.geojson` is ignored by Git.
